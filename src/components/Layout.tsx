@@ -35,15 +35,15 @@ export function Layout({ children }: LayoutProps) {
   const menuItems = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard, roles: ['admin', 'accounts', 'sales', 'warehouse'] },
     { id: 'products', label: t('nav.products'), icon: Package, roles: ['admin', 'sales', 'warehouse'] },
-    { id: 'stock', label: t('nav.stock'), icon: Warehouse, roles: ['admin', 'sales', 'warehouse', 'accounts'] },
     { id: 'batches', label: t('nav.batches'), icon: Boxes, roles: ['admin', 'warehouse', 'accounts'] },
-    { id: 'inventory', label: t('nav.inventory'), icon: Warehouse, roles: ['admin', 'warehouse'] },
+    { id: 'stock', label: t('nav.stock'), icon: Warehouse, roles: ['admin', 'sales', 'warehouse', 'accounts'] },
     { id: 'customers', label: t('nav.customers'), icon: Users, roles: ['admin', 'accounts', 'sales'] },
-    { id: 'crm', label: t('nav.crm'), icon: UserCircle, roles: ['admin', 'sales'] },
-    { id: 'command-center', label: 'Command Center', icon: Zap, roles: ['admin', 'sales'] },
     { id: 'delivery-challan', label: t('nav.deliveryChallan'), icon: Truck, roles: ['admin', 'accounts', 'sales', 'warehouse'] },
     { id: 'sales', label: t('nav.sales'), icon: ShoppingCart, roles: ['admin', 'accounts', 'sales'] },
     { id: 'finance', label: t('nav.finance'), icon: DollarSign, roles: ['admin', 'accounts'] },
+    { id: 'crm', label: t('nav.crm'), icon: UserCircle, roles: ['admin', 'sales'] },
+    { id: 'command-center', label: 'Command Center', icon: Zap, roles: ['admin', 'sales'] },
+    { id: 'inventory', label: t('nav.inventory'), icon: Warehouse, roles: ['admin', 'warehouse'] },
     { id: 'settings', label: t('nav.settings'), icon: Settings, roles: ['admin'] },
   ];
 
