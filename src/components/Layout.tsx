@@ -39,7 +39,7 @@ export function Layout({ children }: LayoutProps) {
     { id: 'inventory', label: t('nav.inventory'), icon: Warehouse, roles: ['admin', 'warehouse'] },
     { id: 'customers', label: t('nav.customers'), icon: Users, roles: ['admin', 'accounts', 'sales'] },
     { id: 'crm', label: t('nav.crm'), icon: UserCircle, roles: ['admin', 'sales'] },
-    { id: 'delivery-challan', label: 'Delivery Challan', icon: Truck, roles: ['admin', 'accounts', 'sales', 'warehouse'] },
+    { id: 'delivery-challan', label: t('nav.deliveryChallan'), icon: Truck, roles: ['admin', 'accounts', 'sales', 'warehouse'] },
     { id: 'sales', label: t('nav.sales'), icon: ShoppingCart, roles: ['admin', 'accounts', 'sales'] },
     { id: 'finance', label: t('nav.finance'), icon: DollarSign, roles: ['admin', 'accounts'] },
     { id: 'settings', label: t('nav.settings'), icon: Settings, roles: ['admin'] },
@@ -65,14 +65,14 @@ export function Layout({ children }: LayoutProps) {
       <aside
         className={`fixed top-0 left-0 z-30 h-full w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } flex flex-col`}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="Logo" className="h-10 w-10" />
+        <div className="flex items-center justify-between p-3 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="Logo" className="h-8 w-8" />
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-bold text-gray-900">PT. SHUBHAM ANZEN</span>
-              <span className="text-sm font-bold text-gray-900">PHARMA JAYA</span>
+              <span className="text-xs font-bold text-gray-900">PT. SHUBHAM ANZEN</span>
+              <span className="text-xs font-bold text-gray-900">PHARMA JAYA</span>
             </div>
           </div>
           <button
@@ -83,7 +83,7 @@ export function Layout({ children }: LayoutProps) {
           </button>
         </div>
 
-        <nav className="p-4 space-y-2">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -94,34 +94,18 @@ export function Layout({ children }: LayoutProps) {
                   setCurrentPage(item.id);
                   setSidebarOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition ${
                   isActive
                     ? 'bg-blue-50 text-blue-600'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium text-sm">{item.label}</span>
               </button>
             );
           })}
         </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-blue-600 font-semibold text-sm">
-                {profile?.full_name?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {profile?.full_name}
-              </p>
-              <p className="text-xs text-gray-500 capitalize">{profile?.role}</p>
-            </div>
-          </div>
-        </div>
       </aside>
 
       <div className="lg:pl-64">
