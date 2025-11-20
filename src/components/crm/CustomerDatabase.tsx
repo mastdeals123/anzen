@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Users, Upload, Search, Edit, Trash2, Building, Mail, Phone, Globe, MapPin } from 'lucide-react';
+import { Users, Upload, Search, Edit, Trash2, Building, Mail, Phone, Globe, MapPin, Activity } from 'lucide-react';
 import { Modal } from '../Modal';
+import { CustomerInteractionTimeline } from './CustomerInteractionTimeline';
 
 interface Contact {
   id: string;
@@ -698,6 +699,22 @@ export function CustomerDatabase({ canManage }: CustomerDatabaseProps) {
                 <p className="text-sm text-gray-600">{selectedContact.notes}</p>
               </div>
             )}
+
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="w-5 h-5 text-gray-700" />
+                <h4 className="text-sm font-semibold text-gray-900">Complete Interaction History</h4>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                <CustomerInteractionTimeline
+                  customerId={selectedContact.id}
+                  companyName={selectedContact.company_name}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Showing all inquiries from Email, WhatsApp, Phone Calls, and other sources
+              </p>
+            </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button
