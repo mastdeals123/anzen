@@ -216,7 +216,7 @@ Deno.serve(async (req: Request) => {
               if (parseResult.success && parseResult.data) {
                 parsedData = parseResult.data;
                 isInquiry = (
-                  (parsedData.productName && parsedData.productName.length > 2) ||
+                  (parsedData.productName && parsedData.productName.length > 2) &&
                   parsedData.confidenceScore >= 0.5
                 );
               }
@@ -247,31 +247,35 @@ Deno.serve(async (req: Request) => {
 
           // If it's an inquiry, create inquiry record
           if (isInquiry && parsedData) {
-            await supabase
+            const { error: inquiryError } = await supabase
               .from('crm_inquiries')
               .insert({
                 inquiry_date: receivedDate.toISOString(),
                 product_name: parsedData.productName || 'Unknown Product',
                 quantity: parsedData.quantity || '',
                 supplier_name: parsedData.supplierName,
-                country_of_origin: parsedData.supplierCountry,
+                supplier_country: parsedData.supplierCountry,
                 company_name: parsedData.companyName,
                 contact_person: parsedData.contactPerson,
                 contact_email: fromEmail,
                 contact_phone: parsedData.contactPhone,
-                coa_requested: parsedData.coaRequested,
-                msds_requested: parsedData.msdsRequested,
-                sample_requested: parsedData.sampleRequested,
-                price_requested: parsedData.priceRequested,
+                coa_sent: parsedData.coaRequested || false,
+                msds_sent: parsedData.msdsRequested || false,
+                sample_sent: parsedData.sampleRequested || false,
+                price_quoted: parsedData.priceRequested || false,
                 purpose_icons: parsedData.purposeIcons,
                 delivery_date_expected: parsedData.deliveryDateExpected,
-                urgency: parsedData.urgency,
+                priority: parsedData.urgency || 'medium',
                 status: 'new',
-                pipeline_stage: 'inquiry_received',
                 source: 'email',
                 remarks: parsedData.remarks,
-                email_inbox_id: insertedEmail.id,
+                source_email_id: insertedEmail.id,
+                ai_confidence_score: parsedData.confidenceScore,
               });
+
+            if (inquiryError) {
+              console.error('Error creating inquiry:', inquiryError);
+            }
 
             return { processed: true, inquiry: true };
           }

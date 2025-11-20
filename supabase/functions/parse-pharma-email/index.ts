@@ -113,30 +113,47 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const systemPrompt = `You are an AI assistant specialized in parsing pharmaceutical industry inquiry emails. Extract key information from emails written in Indonesian or English.
+    const systemPrompt = `You are an AI assistant specialized in parsing PHARMACEUTICAL INDUSTRY INQUIRY emails ONLY.
 
-Your task is to analyze the email and extract:
-1. Product name (e.g., "Sodium Hypophosphite Pharma Grade IHS", "Triamcinolone Acetonide USP")
-2. Quantity with units (e.g., "150 KG", "2 MT", "500 units")
-3. Supplier/Manufacturer name if mentioned (e.g., "Omochi Seiyaku", "Pfizer")
-4. Country of origin if mentioned (Japan, China, India, USA, etc.)
-5. Company name from signature or context (prioritize email signature)
-6. Contact person name (from signature or greeting)
+CRITICAL: Only extract data from emails that are legitimate pharmaceutical/chemical product inquiries or quotation requests.
+
+REJECT these email types (set isInquiry: false):
+- Marketing emails (Amazon, Google, YouTube, Instagram, StackBlitz, etc.)
+- Social media notifications
+- Promotional content
+- Service announcements
+- Newsletter subscriptions
+- Account confirmations
+- Partnership pitches from marketing agencies
+- Any email NOT related to pharmaceutical/chemical product purchases
+
+ACCEPT only these:
+- Emails requesting price quotations for pharmaceutical/chemical products
+- Inquiry emails with product names like APIs, excipients, raw materials
+- Emails with pharmaceutical technical terms (API, USP, EP, BP, GMP, COA, MSDS, etc.)
+- Business inquiries from pharmaceutical companies, distributors, or manufacturers
+- Keywords: "Permintaan Penawaran Harga" (Indonesian for price quotation request), "quotation", "inquiry", "penawaran", "bahan baku"
+
+Extract information for VALID inquiries:
+1. Product name (e.g., "Sodium Hypophosphite Pharma Grade", "Triamcinolone Acetonide USP")
+2. Quantity with units (e.g., "150 KG", "2 MT")
+3. Supplier/Manufacturer name if mentioned
+4. Country of origin if mentioned
+5. Company name from signature
+6. Contact person name
 7. Whether COA (Certificate of Analysis) is requested
 8. Whether MSDS (Material Safety Data Sheet) is requested
 9. Whether sample is requested
 10. Whether price quotation is requested
-11. Expected delivery date or timeframe (e.g., "November 2024", "ASAP", "2 weeks")
-12. Urgency level based on keywords like "urgent", "ASAP", "segera", "mendesak"
-13. Any additional remarks or special requirements
-14. Phone/WhatsApp number if present
-15. Detect the primary language (Indonesian or English)
-16. Confidence score (0.0 to 1.0) for the extraction accuracy
+11. Expected delivery date
+12. Urgency level
+13. Phone/WhatsApp number
+14. Detect language (Indonesian/English)
+15. Confidence score (0.0 to 1.0) - Set BELOW 0.4 for non-pharma emails
 
-IMPORTANT: Purpose icons should be an array containing any of: ['price', 'coa', 'msds', 'sample'] based on what is requested.
-
-Return a JSON object with the following structure:
+Return a JSON object:
 {
+  "isInquiry": boolean,
   "productName": string,
   "quantity": string,
   "supplierName": string | null,
@@ -154,7 +171,8 @@ Return a JSON object with the following structure:
   "remarks": string | null,
   "confidence": "high" | "medium" | "low",
   "confidenceScore": number,
-  "detectedLanguage": string
+  "detectedLanguage": string,
+  "rejectionReason": string | null
 }`;
 
     const userPrompt = `Parse this pharmaceutical inquiry email:
@@ -218,6 +236,11 @@ Respond with a JSON object containing the extracted information.`;
         });
     }
 
+    // Check if AI classified this as a valid inquiry
+    const isValidInquiry = aiResponse.isInquiry !== false &&
+                           (aiResponse.confidenceScore || aiResponse.confidence_score || 0.7) >= 0.4 &&
+                           (aiResponse.productName || aiResponse.product_name);
+
     const parsedInquiry: ParsedInquiry = {
       productName: aiResponse.productName || aiResponse.product_name || '',
       quantity: aiResponse.quantity || '',
@@ -235,8 +258,8 @@ Respond with a JSON object containing the extracted information.`;
       deliveryDateExpected: aiResponse.deliveryDateExpected || aiResponse.delivery_date || aiResponse.deliveryDate || null,
       urgency: aiResponse.urgency || 'medium',
       remarks: aiResponse.remarks || aiResponse.notes || aiResponse.additional_info || null,
-      confidence: aiResponse.confidence || 'medium',
-      confidenceScore: aiResponse.confidenceScore || aiResponse.confidence_score || 0.7,
+      confidence: isValidInquiry ? (aiResponse.confidence || 'medium') : 'low',
+      confidenceScore: isValidInquiry ? (aiResponse.confidenceScore || aiResponse.confidence_score || 0.7) : 0.1,
       detectedLanguage: aiResponse.detectedLanguage || aiResponse.language || 'unknown',
       autoDetectedCompany,
       autoDetectedContact: false,
