@@ -114,10 +114,15 @@ export function GmailCallback() {
           sync_enabled: true,
           last_sync: null,
         }, {
-          onConflict: 'user_id'
+          onConflict: 'user_id,email_address'
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
+
+      console.log('Gmail connection saved to database');
 
       setStatus('success');
       setMessage('Gmail connected successfully! You can close this window.');
