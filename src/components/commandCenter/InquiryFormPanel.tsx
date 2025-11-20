@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Sparkles, AlertTriangle, CheckCircle2, Calendar, Package, Building2 } from 'lucide-react';
+import { FileText, Sparkles, AlertTriangle, CheckCircle2, Calendar, Package, Building2, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Email, ParsedEmailData } from '../../types/commandCenter';
 
 interface InquiryFormPanelProps {
@@ -30,6 +30,7 @@ export interface InquiryFormData {
 }
 
 export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryFormPanelProps) {
+  const [showEmailBody, setShowEmailBody] = useState(false);
   const [formData, setFormData] = useState<InquiryFormData>({
     inquiryNumber: '',
     productName: '',
@@ -76,11 +77,6 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.inquiryNumber.trim()) {
-      alert('Please enter an Inquiry Number');
-      return;
-    }
 
     if (!formData.productName.trim()) {
       alert('Product Name is required');
@@ -143,8 +139,42 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
             </div>
           )}
         </div>
-        {parsedData.autoDetectedCompany && (
-          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
+
+        {email && (
+          <div className="mt-3 bg-white border border-gray-200 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setShowEmailBody(!showEmailBody)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-3">
+                <Mail className="w-5 h-5 text-blue-600" />
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-900">{email.subject}</p>
+                  <p className="text-xs text-gray-500">From: {email.from_name || email.from_email}</p>
+                </div>
+              </div>
+              {showEmailBody ? (
+                <ChevronUp className="w-5 h-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+              )}
+            </button>
+            {showEmailBody && (
+              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+                <p className="text-xs font-medium text-gray-700 mb-2">Email Body:</p>
+                <div className="bg-white border border-gray-200 rounded p-3 max-h-64 overflow-y-auto">
+                  <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+                    {email.body}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {parsedData?.autoDetectedCompany && (
+          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg mt-3">
             <CheckCircle2 className="w-4 h-4" />
             <span>Company auto-detected from email domain</span>
           </div>
@@ -153,31 +183,16 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4">
         <div className="space-y-4">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-yellow-900 mb-1">Manual Input Required</p>
-                <p className="text-xs text-yellow-700">
-                  Enter your inquiry number from your external system below. All other fields are auto-filled.
+                <p className="text-sm font-medium text-green-900 mb-1">Auto-Generated Inquiry Number</p>
+                <p className="text-xs text-green-700">
+                  Inquiry number will be automatically generated when you save (format: INQ-2025-NNNN)
                 </p>
               </div>
             </div>
-          </div>
-
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-            <label className="block text-sm font-bold text-blue-900 mb-2">
-              Inquiry Number * (Manual Input)
-            </label>
-            <input
-              type="text"
-              value={formData.inquiryNumber}
-              onChange={(e) => setFormData({ ...formData, inquiryNumber: e.target.value })}
-              className="w-full px-4 py-3 text-lg font-medium border-2 border-blue-400 rounded-lg focus:ring-4 focus:ring-blue-200 focus:border-blue-500 bg-white"
-              placeholder="Enter your inquiry number (e.g., INQ-2024-001)"
-              required
-              autoFocus
-            />
           </div>
 
           <div className="border-t border-gray-200 pt-4">

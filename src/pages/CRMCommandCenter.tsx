@@ -31,7 +31,6 @@ export function CRMCommandCenter() {
       if (!user) throw new Error('Not authenticated');
 
       const inquiryData = {
-        inquiry_number: formData.inquiryNumber.trim(),
         inquiry_date: new Date().toISOString().split('T')[0],
         product_name: formData.productName,
         quantity: formData.quantity,
