@@ -3,13 +3,15 @@ import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Mail, Calendar as CalendarIcon, LayoutGrid, Users, Table, Inbox } from 'lucide-react';
+import { Plus, Mail, Calendar as CalendarIcon, LayoutGrid, Users, Table, Inbox, Activity, Clock } from 'lucide-react';
 import { EmailInbox } from '../components/crm/EmailInbox';
 import { InquiryTable } from '../components/crm/InquiryTable';
 import { ReminderCalendar } from '../components/crm/ReminderCalendar';
 import { PipelineBoard } from '../components/crm/PipelineBoard';
 import { EmailComposer } from '../components/crm/EmailComposer';
 import { CustomerDatabase } from '../components/crm/CustomerDatabase';
+import { ActivityLogger } from '../components/crm/ActivityLogger';
+import { AppointmentScheduler } from '../components/crm/AppointmentScheduler';
 
 interface Inquiry {
   id: string;
@@ -46,7 +48,7 @@ export function CRM() {
   const { profile } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'table' | 'pipeline' | 'calendar' | 'email' | 'customers'>('table');
+  const [activeTab, setActiveTab] = useState<'table' | 'pipeline' | 'calendar' | 'email' | 'customers' | 'activities' | 'appointments'>('table');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInquiry, setEditingInquiry] = useState<Inquiry | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -314,6 +316,28 @@ export function CRM() {
                 <Users className="w-5 h-5" />
                 Customers
               </button>
+              <button
+                onClick={() => setActiveTab('activities')}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'activities'
+                    ? 'border-blue-500 text-blue-600 font-medium'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Activity className="w-5 h-5" />
+                Activities
+              </button>
+              <button
+                onClick={() => setActiveTab('appointments')}
+                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'appointments'
+                    ? 'border-blue-500 text-blue-600 font-medium'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Clock className="w-5 h-5" />
+                Appointments
+              </button>
             </div>
           </div>
 
@@ -345,6 +369,14 @@ export function CRM() {
 
             {activeTab === 'customers' && (
               <CustomerDatabase canManage={canManage} />
+            )}
+
+            {activeTab === 'activities' && (
+              <ActivityLogger onActivityLogged={loadInquiries} />
+            )}
+
+            {activeTab === 'appointments' && (
+              <AppointmentScheduler onAppointmentCreated={loadInquiries} />
             )}
           </div>
         </div>
