@@ -10,6 +10,7 @@ import { Stock } from './pages/Stock';
 import { Batches } from './pages/Batches';
 import { Inventory } from './pages/Inventory';
 import { CRM } from './pages/CRM';
+import { CRMCommandCenter } from './pages/CRMCommandCenter';
 import { DeliveryChallan } from './pages/DeliveryChallan';
 import { Sales } from './pages/Sales';
 import { Finance } from './pages/Finance';
@@ -61,6 +62,8 @@ function AppContent() {
       case 'customers':
         return <Customers />;
       case 'crm':
+        return <CRMCommandCenter />;
+      case 'crm-old':
         return <CRM />;
       case 'delivery-challan':
         return <DeliveryChallan />;
