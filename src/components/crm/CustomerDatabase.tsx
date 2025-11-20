@@ -48,17 +48,13 @@ export function CustomerDatabase({ canManage }: CustomerDatabaseProps) {
 
   const [formData, setFormData] = useState({
     company_name: '',
-    company_type: '',
-    industry: '',
-    country: '',
-    city: '',
     address: '',
-    website: '',
-    contact_person: '',
-    designation: '',
-    email: '',
+    city: '',
+    company_type: 'trader' as 'trader' | 'end_user',
     phone: '',
+    contact_person: '',
     mobile: '',
+    email: '',
     customer_type: 'prospect' as 'prospect' | 'active' | 'inactive' | 'vip',
     notes: '',
   });
@@ -122,17 +118,13 @@ export function CustomerDatabase({ canManage }: CustomerDatabaseProps) {
     setEditingContact(contact);
     setFormData({
       company_name: contact.company_name,
-      company_type: contact.company_type || '',
-      industry: contact.industry || '',
-      country: contact.country || '',
-      city: contact.city || '',
       address: contact.address || '',
-      website: contact.website || '',
-      contact_person: contact.contact_person || '',
-      designation: contact.designation || '',
-      email: contact.email || '',
+      city: contact.city || '',
+      company_type: (contact.company_type as any) || 'trader',
       phone: contact.phone || '',
+      contact_person: contact.contact_person || '',
       mobile: contact.mobile || '',
+      email: contact.email || '',
       customer_type: (contact.customer_type as any) || 'prospect',
       notes: contact.notes || '',
     });
@@ -157,10 +149,10 @@ export function CustomerDatabase({ canManage }: CustomerDatabaseProps) {
   };
 
   const downloadSampleCSV = () => {
-    const csvContent = `Company Name,Contact Person,Email,Phone,Country,City,Website,Industry
-Acme Pharmaceuticals,John Smith,john@acme.com,+1-555-0123,USA,New York,https://acme.com,Pharmaceutical
-Global Medtech Inc,Maria Garcia,maria@globalmedtech.com,+44-20-1234-5678,UK,London,https://globalmedtech.com,Medical Devices
-Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Singapore,https://biosolutions.com,Biotechnology`;
+    const csvContent = `Company Name,Address,City,Category,Office Phone,Contact Person,Mobile No,Email Id
+Acme Pharmaceuticals,"123 Main Street, Building A",Jakarta,TRADER,021-1234567,John Smith,08123456789,john@acme.com
+Global Medtech Inc,"456 Business Park",Surabaya,END USER,031-9876543,Maria Garcia,08198765432,maria@globalmedtech.com
+Bio Solutions Ltd,"789 Industrial Zone",Bandung,TRADER,022-5554321,David Chen,08187654321,david@biosolutions.com`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -198,23 +190,24 @@ Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Sing
         };
 
         headers.forEach((header, index) => {
-          const lowerHeader = header.toLowerCase();
-          if (lowerHeader.includes('company') && lowerHeader.includes('name')) {
+          const lowerHeader = header.toLowerCase().replace(/\s+/g, '');
+          if (lowerHeader.includes('companyname')) {
             contact.company_name = values[index];
-          } else if (lowerHeader.includes('contact') && lowerHeader.includes('person')) {
-            contact.contact_person = values[index];
-          } else if (lowerHeader.includes('email')) {
-            contact.email = values[index];
-          } else if (lowerHeader.includes('phone')) {
-            contact.phone = values[index];
-          } else if (lowerHeader.includes('country')) {
-            contact.country = values[index];
+          } else if (lowerHeader.includes('address')) {
+            contact.address = values[index];
           } else if (lowerHeader.includes('city')) {
             contact.city = values[index];
-          } else if (lowerHeader.includes('website')) {
-            contact.website = values[index];
-          } else if (lowerHeader.includes('industry')) {
-            contact.industry = values[index];
+          } else if (lowerHeader.includes('category')) {
+            const category = values[index].toLowerCase();
+            contact.company_type = category.includes('end') ? 'end_user' : 'trader';
+          } else if (lowerHeader.includes('officephone') || lowerHeader.includes('office')) {
+            contact.phone = values[index];
+          } else if (lowerHeader.includes('contactperson')) {
+            contact.contact_person = values[index];
+          } else if (lowerHeader.includes('mobileno') || lowerHeader.includes('mobile')) {
+            contact.mobile = values[index];
+          } else if (lowerHeader.includes('emailid') || lowerHeader.includes('email')) {
+            contact.email = values[index];
           }
         });
 
@@ -250,17 +243,13 @@ Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Sing
     setEditingContact(null);
     setFormData({
       company_name: '',
-      company_type: '',
-      industry: '',
-      country: '',
-      city: '',
       address: '',
-      website: '',
-      contact_person: '',
-      designation: '',
-      email: '',
+      city: '',
+      company_type: 'trader',
       phone: '',
+      contact_person: '',
       mobile: '',
+      email: '',
       customer_type: 'prospect',
       notes: '',
     });
@@ -347,10 +336,10 @@ Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Sing
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Company</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">City</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Category</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Contact Person</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Email</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Phone</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Country</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Mobile</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Type</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-700">Inquiries</th>
                   {canManage && <th className="px-4 py-3 text-center font-semibold text-gray-700">Actions</th>}
@@ -376,19 +365,20 @@ Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Sing
                         >
                           {contact.company_name}
                         </button>
-                        {contact.industry && (
-                          <div className="text-xs text-gray-500">{contact.industry}</div>
+                        {contact.address && (
+                          <div className="text-xs text-gray-500">{contact.address}</div>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-gray-600">{contact.city || '-'}</td>
                       <td className="px-4 py-3">
-                        {contact.contact_person || '-'}
-                        {contact.designation && (
-                          <div className="text-xs text-gray-500">{contact.designation}</div>
-                        )}
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          contact.company_type === 'end_user' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {contact.company_type === 'end_user' ? 'END USER' : 'TRADER'}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{contact.email || '-'}</td>
-                      <td className="px-4 py-3 text-gray-600">{contact.phone || contact.mobile || '-'}</td>
-                      <td className="px-4 py-3 text-gray-600">{contact.country || '-'}</td>
+                      <td className="px-4 py-3">{contact.contact_person || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600">{contact.mobile || '-'}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${customerTypeConfig[contact.customer_type as keyof typeof customerTypeConfig]?.color || 'bg-gray-100 text-gray-800'}`}>
                           {customerTypeConfig[contact.customer_type as keyof typeof customerTypeConfig]?.label || contact.customer_type}
@@ -447,65 +437,102 @@ Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Sing
               />
             </div>
 
-            <div>
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Person
+                Address *
               </label>
               <input
                 type="text"
-                value={formData.contact_person}
-                onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Street address, building number, etc."
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Designation
+                City *
               </label>
               <input
                 type="text"
-                value={formData.designation}
-                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Purchasing Manager"
+                placeholder="e.g., Jakarta"
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+                Category *
               </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              <select
+                value={formData.company_type}
+                onChange={(e) => setFormData({ ...formData, company_type: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+                required
+              >
+                <option value="trader">TRADER</option>
+                <option value="end_user">END USER</option>
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
+                Office Phone *
               </label>
               <input
                 type="text"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., 021-1234567"
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Industry
+                Contact Person *
               </label>
               <input
                 type="text"
-                value={formData.industry}
-                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                value={formData.contact_person}
+                onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Pharmaceutical"
+                placeholder="Full name"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mobile No *
+              </label>
+              <input
+                type="text"
+                value={formData.mobile}
+                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., 08123456789"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Id *
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="email@company.com"
+                required
               />
             </div>
 
@@ -523,43 +550,6 @@ Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Sing
                 <option value="vip">VIP</option>
                 <option value="inactive">Inactive</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Country
-              </label>
-              <input
-                type="text"
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                City
-              </label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Website
-              </label>
-              <input
-                type="url"
-                value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="https://..."
-              />
             </div>
 
             <div className="col-span-2">
@@ -606,8 +596,8 @@ Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Sing
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900 font-medium mb-2">CSV Format Instructions:</p>
               <ul className="text-xs text-blue-800 space-y-1">
-                <li>• Required column: Company Name</li>
-                <li>• Optional columns: Contact Person, Email, Phone, Country, City, Website, Industry</li>
+                <li>• Required columns: Company Name, Address, City, Category, Office Phone, Contact Person, Mobile No, Email Id</li>
+                <li>• Category must be either "TRADER" or "END USER"</li>
                 <li>• First row should contain column headers</li>
                 <li>• All contacts will be imported as "Prospect" type</li>
               </ul>
