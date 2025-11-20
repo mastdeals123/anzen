@@ -150,9 +150,9 @@ export function CustomerDatabase({ canManage }: CustomerDatabaseProps) {
 
   const downloadSampleCSV = () => {
     const csvContent = `Company Name,Address,City,Category,Office Phone,Contact Person,Mobile No,Email Id
-Acme Pharmaceuticals,"123 Main Street, Building A",Jakarta,TRADER,021-1234567,John Smith,08123456789,john@acme.com
+Acme Pharmaceuticals,"123 Main Street, Building A",Jakarta,TRADER,021-1234567,John Smith,08123456789,john@acme.com;purchasing@acme.com
 Global Medtech Inc,"456 Business Park",Surabaya,END USER,031-9876543,Maria Garcia,08198765432,maria@globalmedtech.com
-Bio Solutions Ltd,"789 Industrial Zone",Bandung,TRADER,022-5554321,David Chen,08187654321,david@biosolutions.com`;
+Bio Solutions Ltd,"789 Industrial Zone",Bandung,TRADER,022-5554321,David Chen,08187654321,david@biosolutions.com;sales@biosolutions.com;info@biosolutions.com`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -527,13 +527,14 @@ Bio Solutions Ltd,"789 Industrial Zone",Bandung,TRADER,022-5554321,David Chen,08
                 Email Id *
               </label>
               <input
-                type="email"
+                type="text"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="email@company.com"
+                placeholder="email@company.com; email2@company.com"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">Separate multiple emails with semicolon (;)</p>
             </div>
 
             <div>
@@ -598,6 +599,7 @@ Bio Solutions Ltd,"789 Industrial Zone",Bandung,TRADER,022-5554321,David Chen,08
               <ul className="text-xs text-blue-800 space-y-1">
                 <li>• Required columns: Company Name, Address, City, Category, Office Phone, Contact Person, Mobile No, Email Id</li>
                 <li>• Category must be either "TRADER" or "END USER"</li>
+                <li>• For multiple emails, separate with semicolon (;) - e.g., email1@company.com;email2@company.com</li>
                 <li>• First row should contain column headers</li>
                 <li>• All contacts will be imported as "Prospect" type</li>
               </ul>

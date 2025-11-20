@@ -96,12 +96,17 @@ export function EmailComposer({ inquiry, onClose, onSent }: EmailComposerProps) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      const emailAddresses = toEmail
+        .split(';')
+        .map(email => email.trim())
+        .filter(email => email.length > 0);
+
       const emailData = {
         inquiry_id: inquiry?.id || null,
         contact_id: null,
         email_type: 'sent',
         from_email: user.email,
-        to_email: [toEmail],
+        to_email: emailAddresses,
         subject: subject,
         body: body,
         template_id: selectedTemplate?.id || null,
@@ -169,13 +174,19 @@ export function EmailComposer({ inquiry, onClose, onSent }: EmailComposerProps) 
           To *
         </label>
         <input
-          type="email"
+          type="text"
           value={toEmail}
           onChange={(e) => setToEmail(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          placeholder="recipient@example.com"
+          placeholder="recipient@example.com; recipient2@example.com"
           required
         />
+        <p className="text-xs text-gray-500 mt-1">
+          {toEmail.includes(';') ?
+            `Sending to ${toEmail.split(';').filter(e => e.trim()).length} email addresses` :
+            'Separate multiple emails with semicolon (;)'
+          }
+        </p>
       </div>
 
       <div>

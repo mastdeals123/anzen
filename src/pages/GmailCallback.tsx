@@ -42,6 +42,10 @@ export function GmailCallback() {
       const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
       const redirectUri = `${window.location.origin}/auth/gmail/callback`;
 
+      if (!clientId || !clientSecret) {
+        throw new Error('Google OAuth credentials not configured. Please check your .env file.');
+      }
+
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
