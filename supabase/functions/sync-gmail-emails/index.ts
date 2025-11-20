@@ -187,7 +187,7 @@ Deno.serve(async (req: Request) => {
           const { data: existing } = await supabase
             .from('crm_email_inbox')
             .select('id')
-            .eq('gmail_message_id', messageData.id)
+            .eq('message_id', messageData.id)
             .maybeSingle();
 
           if (existing) return null;
@@ -230,13 +230,13 @@ Deno.serve(async (req: Request) => {
             .from('crm_email_inbox')
             .insert({
               gmail_connection_id: connection.id,
-              gmail_message_id: messageData.id,
-              gmail_thread_id: messageData.threadId,
+              message_id: messageData.id,
+              thread_id: messageData.threadId,
               subject,
               from_email: fromEmail,
               from_name: fromName,
-              body_text: body,
-              received_at: receivedDate.toISOString(),
+              body: body,
+              received_date: receivedDate.toISOString(),
               is_processed: isInquiry,
               is_inquiry: isInquiry,
             })
