@@ -12,9 +12,12 @@ export function GmailCallback() {
 
   const handleCallback = async () => {
     try {
+      console.log('Starting Gmail OAuth callback...');
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const error = urlParams.get('error');
+
+      console.log('Callback params:', { hasCode: !!code, error });
 
       if (error) {
         setStatus('error');
@@ -42,9 +45,17 @@ export function GmailCallback() {
       const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
       const redirectUri = `${window.location.origin}/auth/gmail/callback`;
 
+      console.log('OAuth config:', {
+        hasClientId: !!clientId,
+        hasClientSecret: !!clientSecret,
+        redirectUri
+      });
+
       if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials not configured. Please check your .env file.');
       }
+
+      console.log('Exchanging code for token...');
 
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -62,10 +73,12 @@ export function GmailCallback() {
 
       if (!tokenResponse.ok) {
         const errorData = await tokenResponse.text();
+        console.error('Token exchange failed:', errorData);
         throw new Error(`Token exchange failed: ${errorData}`);
       }
 
       const tokenData = await tokenResponse.json();
+      console.log('Token received, fetching profile...');
 
       const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
         headers: {
@@ -74,10 +87,17 @@ export function GmailCallback() {
       });
 
       if (!profileResponse.ok) {
-        throw new Error('Failed to fetch Gmail profile');
+        const errorText = await profileResponse.text();
+        console.error('Profile fetch failed:', {
+          status: profileResponse.status,
+          statusText: profileResponse.statusText,
+          body: errorText
+        });
+        throw new Error(`Failed to fetch Gmail profile (${profileResponse.status}): ${errorText}`);
       }
 
       const profileData = await profileResponse.json();
+      console.log('Profile fetched:', profileData.email);
 
       const expiresAt = new Date();
       expiresAt.setSeconds(expiresAt.getSeconds() + tokenData.expires_in);
