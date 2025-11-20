@@ -62,9 +62,9 @@ function AppContent() {
       case 'customers':
         return <Customers />;
       case 'crm':
-        return <CRMCommandCenter />;
-      case 'crm-old':
         return <CRM />;
+      case 'command-center':
+        return <CRMCommandCenter />;
       case 'delivery-challan':
         return <DeliveryChallan />;
       case 'sales':

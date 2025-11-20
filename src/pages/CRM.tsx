@@ -65,6 +65,7 @@ export function CRM() {
     contact_phone: '',
     status: 'new',
     priority: 'medium',
+    inquiry_source: 'other',
     remarks: '',
     internal_notes: '',
   });
@@ -154,6 +155,7 @@ export function CRM() {
       contact_phone: inquiry.contact_phone || '',
       status: inquiry.status,
       priority: inquiry.priority,
+      inquiry_source: (inquiry as any).inquiry_source || 'other',
       remarks: inquiry.remarks || '',
       internal_notes: inquiry.internal_notes || '',
     });
@@ -203,6 +205,7 @@ export function CRM() {
       contact_phone: '',
       status: 'new',
       priority: 'medium',
+      inquiry_source: 'other',
       remarks: '',
       internal_notes: '',
     });
@@ -432,6 +435,24 @@ export function CRM() {
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
                   <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Inquiry Source *
+                </label>
+                <select
+                  value={formData.inquiry_source}
+                  onChange={(e) => setFormData({ ...formData, inquiry_source: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="email">Email</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="phone_call">Phone Call</option>
+                  <option value="walk_in">Walk-in</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 

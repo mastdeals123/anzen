@@ -43,6 +43,7 @@ export function CRMCommandCenter() {
         contact_phone: formData.contactPhone || null,
         email_subject: selectedEmail.subject,
         email_body: selectedEmail.body,
+        inquiry_source: 'email',
         status: 'new',
         priority: formData.priority,
         purpose_icons: formData.purposeIcons,

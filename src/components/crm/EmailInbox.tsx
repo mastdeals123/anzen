@@ -147,6 +147,7 @@ export function EmailInbox({ onInquiryCreated }: EmailInboxProps) {
         contact_email: parsedData.contactEmail,
         contact_phone: parsedData.contactPhone || null,
         email_subject: selectedEmail.subject,
+        inquiry_source: 'email',
         email_body: selectedEmail.body,
         status: 'new',
         priority: parsedData.urgency,

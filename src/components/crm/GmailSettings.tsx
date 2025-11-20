@@ -45,7 +45,7 @@ export function GmailSettings() {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
     if (!clientId) {
-      alert('Gmail integration is not configured. Please contact your administrator to set up VITE_GOOGLE_CLIENT_ID in environment variables.');
+      alert('Gmail integration is not configured. Please add VITE_GOOGLE_CLIENT_ID to your .env file.\n\nSteps:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 credentials\n3. Add the Client ID to .env file\n4. Restart the dev server\n\nSee GMAIL_SETUP.md for detailed instructions.');
       return;
     }
 
@@ -64,7 +64,16 @@ export function GmailSettings() {
       `&access_type=offline` +
       `&prompt=consent`;
 
-    window.location.href = authUrl;
+    const width = 600;
+    const height = 700;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    window.open(
+      authUrl,
+      'Gmail OAuth',
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+    );
   };
 
   const handleDisconnect = async () => {
