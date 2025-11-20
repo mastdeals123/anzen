@@ -160,89 +160,94 @@ Deno.serve(async (req: Request) => {
     let processedCount = 0;
     let newInquiriesCount = 0;
 
-    for (const message of messages) {
-      const messageResponse = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}`,
-        { headers: { 'Authorization': `Bearer ${accessToken}` } }
-      );
+    // Process emails in parallel batches of 5 for speed
+    const batchSize = 5;
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize);
 
-      if (!messageResponse.ok) continue;
-
-      const messageData: GmailMessage = await messageResponse.json();
-      const headers = messageData.payload.headers;
-
-      const subject = getHeader(headers, 'subject');
-      const from = getHeader(headers, 'from');
-      const fromEmail = from.match(/<(.+?)>/)?.[1] || from;
-      const fromName = from.replace(/<.+?>/, '').trim();
-      const body = extractEmailBody(messageData.payload);
-      const receivedDate = new Date(parseInt(messageData.internalDate));
-
-      const { data: existing } = await supabase
-        .from('crm_email_inbox')
-        .select('id')
-        .eq('gmail_message_id', messageData.id)
-        .maybeSingle();
-
-      if (!existing) {
-        // Call AI parser to analyze email
-        let isInquiry = false;
-        let parsedData = null;
-
+      const batchPromises = batch.map(async (message) => {
         try {
-          const parseResponse = await fetch(`${supabaseUrl}/functions/v1/parse-pharma-email`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseServiceKey}`,
-            },
-            body: JSON.stringify({
-              emailSubject: subject,
-              emailBody: body,
-              fromEmail: fromEmail,
-              fromName: fromName,
-            }),
-          });
+          const messageResponse = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}`,
+            { headers: { 'Authorization': `Bearer ${accessToken}` } }
+          );
 
-          if (parseResponse.ok) {
-            const parseResult = await parseResponse.json();
-            if (parseResult.success && parseResult.data) {
-              parsedData = parseResult.data;
-              // Consider it an inquiry if it has product name or high confidence
-              isInquiry = (
-                (parsedData.productName && parsedData.productName.length > 2) ||
-                parsedData.confidenceScore >= 0.5
-              );
+          if (!messageResponse.ok) return null;
+
+          const messageData: GmailMessage = await messageResponse.json();
+          const headers = messageData.payload.headers;
+
+          const subject = getHeader(headers, 'subject');
+          const from = getHeader(headers, 'from');
+          const fromEmail = from.match(/<(.+?)>/)?.[1] || from;
+          const fromName = from.replace(/<.+?>/, '').trim();
+          const body = extractEmailBody(messageData.payload);
+          const receivedDate = new Date(parseInt(messageData.internalDate));
+
+          const { data: existing } = await supabase
+            .from('crm_email_inbox')
+            .select('id')
+            .eq('gmail_message_id', messageData.id)
+            .maybeSingle();
+
+          if (existing) return null;
+
+          // Call AI parser to analyze email
+          let isInquiry = false;
+          let parsedData = null;
+
+          try {
+            const parseResponse = await fetch(`${supabaseUrl}/functions/v1/parse-pharma-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({
+                emailSubject: subject,
+                emailBody: body,
+                fromEmail: fromEmail,
+                fromName: fromName,
+              }),
+            });
+
+            if (parseResponse.ok) {
+              const parseResult = await parseResponse.json();
+              if (parseResult.success && parseResult.data) {
+                parsedData = parseResult.data;
+                isInquiry = (
+                  (parsedData.productName && parsedData.productName.length > 2) ||
+                  parsedData.confidenceScore >= 0.5
+                );
+              }
             }
+          } catch (parseError) {
+            console.error('Failed to parse email:', parseError);
           }
-        } catch (parseError) {
-          console.error('Failed to parse email:', parseError);
-        }
 
-        // Insert email into inbox
-        const { data: insertedEmail, error: insertError } = await supabase
-          .from('crm_email_inbox')
-          .insert({
-            gmail_connection_id: connection.id,
-            gmail_message_id: messageData.id,
-            gmail_thread_id: messageData.threadId,
-            subject,
-            from_email: fromEmail,
-            from_name: fromName,
-            body_text: body,
-            received_at: receivedDate.toISOString(),
-            is_processed: isInquiry,
-            is_inquiry: isInquiry,
-          })
-          .select()
-          .single();
+          // Insert email into inbox
+          const { data: insertedEmail, error: insertError } = await supabase
+            .from('crm_email_inbox')
+            .insert({
+              gmail_connection_id: connection.id,
+              gmail_message_id: messageData.id,
+              gmail_thread_id: messageData.threadId,
+              subject,
+              from_email: fromEmail,
+              from_name: fromName,
+              body_text: body,
+              received_at: receivedDate.toISOString(),
+              is_processed: isInquiry,
+              is_inquiry: isInquiry,
+            })
+            .select()
+            .single();
 
-        if (!insertError && insertedEmail) {
-          processedCount++;
+          if (insertError || !insertedEmail) return null;
 
           // If it's an inquiry, create inquiry record
           if (isInquiry && parsedData) {
-            const { error: inquiryError } = await supabase
+            await supabase
               .from('crm_inquiries')
               .insert({
                 inquiry_date: receivedDate.toISOString(),
@@ -268,10 +273,22 @@ Deno.serve(async (req: Request) => {
                 email_inbox_id: insertedEmail.id,
               });
 
-            if (!inquiryError) {
-              newInquiriesCount++;
-            }
+            return { processed: true, inquiry: true };
           }
+
+          return { processed: true, inquiry: false };
+        } catch (error) {
+          console.error('Error processing message:', error);
+          return null;
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+
+      for (const result of batchResults) {
+        if (result?.processed) {
+          processedCount++;
+          if (result.inquiry) newInquiriesCount++;
         }
       }
     }

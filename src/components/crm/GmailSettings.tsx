@@ -157,22 +157,46 @@ export function GmailSettings() {
   };
 
   const handleManualSync = async () => {
+    if (syncing) return;
+
     setSyncing(true);
+
+    // Show immediate feedback
+    const notification = {
+      title: 'Email Sync Started',
+      message: 'Syncing emails in background. You can continue using the app.',
+    };
+    console.log(notification);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         alert('Please sign in to sync emails');
+        setSyncing(false);
         return;
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-gmail-emails`;
+
+      // Use timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error (${response.status}): ${errorText}`);
+      }
 
       const result = await response.json();
 
@@ -184,7 +208,11 @@ export function GmailSettings() {
       }
     } catch (error) {
       console.error('Error syncing emails:', error);
-      alert(`Failed to sync emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error instanceof Error && error.name === 'AbortError') {
+        alert('Sync is taking longer than expected. It will continue in the background. Check back in a few minutes.');
+      } else {
+        alert(`Failed to sync emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } finally {
       setSyncing(false);
     }
