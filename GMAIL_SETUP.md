@@ -61,8 +61,8 @@ Add these to your `.env` file:
 
 ```bash
 # Gmail OAuth2 Configuration
-VITE_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
-VITE_GOOGLE_CLIENT_SECRET=your-client-secret-here
+VITE_GOOGLE_CLIENT_ID=491743356480-nl1q5o5
+VITE_GOOGLE_CLIENT_SECRET=GOCSPX-S3JCfv0IN
 VITE_GOOGLE_REDIRECT_URI=https://your-app-domain.com/auth/callback
 ```
 
