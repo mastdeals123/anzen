@@ -185,7 +185,42 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (!existing) {
-        const { error: insertError } = await supabase
+        // Call AI parser to analyze email
+        let isInquiry = false;
+        let parsedData = null;
+
+        try {
+          const parseResponse = await fetch(`${supabaseUrl}/functions/v1/parse-pharma-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              emailSubject: subject,
+              emailBody: body,
+              fromEmail: fromEmail,
+              fromName: fromName,
+            }),
+          });
+
+          if (parseResponse.ok) {
+            const parseResult = await parseResponse.json();
+            if (parseResult.success && parseResult.data) {
+              parsedData = parseResult.data;
+              // Consider it an inquiry if it has product name or high confidence
+              isInquiry = (
+                (parsedData.productName && parsedData.productName.length > 2) ||
+                parsedData.confidenceScore >= 0.5
+              );
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse email:', parseError);
+        }
+
+        // Insert email into inbox
+        const { data: insertedEmail, error: insertError } = await supabase
           .from('crm_email_inbox')
           .insert({
             gmail_connection_id: connection.id,
@@ -196,12 +231,47 @@ Deno.serve(async (req: Request) => {
             from_name: fromName,
             body_text: body,
             received_at: receivedDate.toISOString(),
-            is_processed: false,
-            is_inquiry: false,
-          });
+            is_processed: isInquiry,
+            is_inquiry: isInquiry,
+          })
+          .select()
+          .single();
 
-        if (!insertError) {
+        if (!insertError && insertedEmail) {
           processedCount++;
+
+          // If it's an inquiry, create inquiry record
+          if (isInquiry && parsedData) {
+            const { error: inquiryError } = await supabase
+              .from('crm_inquiries')
+              .insert({
+                inquiry_date: receivedDate.toISOString(),
+                product_name: parsedData.productName || 'Unknown Product',
+                quantity: parsedData.quantity || '',
+                supplier_name: parsedData.supplierName,
+                country_of_origin: parsedData.supplierCountry,
+                company_name: parsedData.companyName,
+                contact_person: parsedData.contactPerson,
+                contact_email: fromEmail,
+                contact_phone: parsedData.contactPhone,
+                coa_requested: parsedData.coaRequested,
+                msds_requested: parsedData.msdsRequested,
+                sample_requested: parsedData.sampleRequested,
+                price_requested: parsedData.priceRequested,
+                purpose_icons: parsedData.purposeIcons,
+                delivery_date_expected: parsedData.deliveryDateExpected,
+                urgency: parsedData.urgency,
+                status: 'new',
+                pipeline_stage: 'inquiry_received',
+                source: 'email',
+                remarks: parsedData.remarks,
+                email_inbox_id: insertedEmail.id,
+              });
+
+            if (!inquiryError) {
+              newInquiriesCount++;
+            }
+          }
         }
       }
     }
