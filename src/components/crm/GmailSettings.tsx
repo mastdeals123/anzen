@@ -43,13 +43,36 @@ export function GmailSettings() {
 
   const handleConnectGmail = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const redirectUri = `${window.location.origin}/auth/gmail/callback`;
 
     if (!clientId) {
       alert('Gmail integration is not configured. Please add VITE_GOOGLE_CLIENT_ID to your .env file.\n\nSteps:\n1. Go to Google Cloud Console\n2. Create OAuth 2.0 credentials\n3. Add the Client ID to .env file\n4. Restart the dev server\n\nSee GMAIL_SETUP.md for detailed instructions.');
       return;
     }
 
-    const redirectUri = `${window.location.origin}/auth/gmail/callback`;
+    // Show user the redirect URI they need to configure
+    console.log('🔑 Gmail OAuth Configuration:');
+    console.log('Redirect URI:', redirectUri);
+    console.log('\n📋 Add this to Google Cloud Console:');
+    console.log('   https://console.cloud.google.com/apis/credentials');
+
+    const confirmed = confirm(
+      `⚠️ IMPORTANT: Before connecting Gmail\n\n` +
+      `You must add this redirect URI to Google Cloud Console:\n\n` +
+      `${redirectUri}\n\n` +
+      `Steps:\n` +
+      `1. Go to: https://console.cloud.google.com/apis/credentials\n` +
+      `2. Click your OAuth Client ID\n` +
+      `3. Under "Authorized redirect URIs", add:\n   ${redirectUri}\n` +
+      `4. Click "Save"\n` +
+      `5. Wait 5 minutes for changes to propagate\n\n` +
+      `Have you completed these steps?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     const scope = [
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.modify',
