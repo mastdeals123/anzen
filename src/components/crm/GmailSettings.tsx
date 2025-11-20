@@ -19,6 +19,12 @@ export function GmailSettings() {
 
   useEffect(() => {
     loadConnection();
+
+    const interval = setInterval(() => {
+      loadConnection();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const loadConnection = async () => {
@@ -151,10 +157,32 @@ export function GmailSettings() {
   const handleManualSync = async () => {
     setSyncing(true);
     try {
-      alert('Manual sync feature coming soon! For now, emails are synced automatically every 10 minutes.');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Please sign in to sync emails');
+        return;
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-gmail-emails`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`Email sync completed!\n\n✓ Total messages found: ${result.totalMessages}\n✓ New emails processed: ${result.processedCount}\n✓ New inquiries: ${result.newInquiriesCount}`);
+        loadConnection();
+      } else {
+        throw new Error(result.error || 'Sync failed');
+      }
     } catch (error) {
       console.error('Error syncing emails:', error);
-      alert('Failed to sync emails');
+      alert(`Failed to sync emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSyncing(false);
     }
@@ -170,9 +198,23 @@ export function GmailSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <SettingsIcon className="w-5 h-5 text-blue-600" />
-        <h3 className="text-lg font-semibold">Gmail Integration</h3>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <SettingsIcon className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Gmail Integration</h3>
+        </div>
+
+        {connection?.is_connected ? (
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-sm font-medium text-green-700">Connected</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg">
+            <div className="w-2 h-2 bg-gray-400 rounded-full" />
+            <span className="text-sm font-medium text-gray-600">Not Connected</span>
+          </div>
+        )}
       </div>
 
       {!connection?.is_connected ? (
