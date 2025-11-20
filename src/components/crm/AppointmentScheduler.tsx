@@ -17,6 +17,14 @@ interface Appointment {
   user_profiles?: {
     full_name: string;
   };
+  crm_contacts?: {
+    company_name: string;
+  };
+}
+
+interface Contact {
+  id: string;
+  company_name: string;
 }
 
 interface AppointmentSchedulerProps {
@@ -28,6 +36,7 @@ interface AppointmentSchedulerProps {
 export function AppointmentScheduler({ customerId, leadId, onAppointmentCreated }: AppointmentSchedulerProps) {
   const { profile } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -37,17 +46,35 @@ export function AppointmentScheduler({ customerId, leadId, onAppointmentCreated 
     description: '',
     follow_up_date: '',
     location: '',
+    customer_id: customerId || '',
   });
 
   useEffect(() => {
     loadAppointments();
+    if (!customerId && !leadId) {
+      loadContacts();
+    }
   }, [customerId, leadId]);
+
+  const loadContacts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('crm_contacts')
+        .select('id, company_name')
+        .order('company_name', { ascending: true });
+
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+    }
+  };
 
   const loadAppointments = async () => {
     try {
       let query = supabase
         .from('crm_activities')
-        .select('*, user_profiles!crm_activities_created_by_fkey(full_name)')
+        .select('*, user_profiles!crm_activities_created_by_fkey(full_name), crm_contacts(company_name)')
         .in('activity_type', ['meeting', 'video_call', 'phone_call'])
         .not('follow_up_date', 'is', null)
         .order('follow_up_date', { ascending: true });
@@ -85,8 +112,13 @@ export function AppointmentScheduler({ customerId, leadId, onAppointmentCreated 
         created_by: user.id,
       };
 
-      if (customerId) appointmentData.customer_id = customerId;
-      if (leadId) appointmentData.lead_id = leadId;
+      if (customerId) {
+        appointmentData.customer_id = customerId;
+      } else if (leadId) {
+        appointmentData.lead_id = leadId;
+      } else if (formData.customer_id) {
+        appointmentData.customer_id = formData.customer_id;
+      }
 
       if (editingAppointment) {
         const { error } = await supabase
@@ -129,6 +161,7 @@ export function AppointmentScheduler({ customerId, leadId, onAppointmentCreated 
       description: appointment.description || '',
       follow_up_date: appointment.follow_up_date,
       location: '',
+      customer_id: appointment.customer_id || customerId || '',
     });
     setShowForm(true);
   };
@@ -223,6 +256,7 @@ export function AppointmentScheduler({ customerId, leadId, onAppointmentCreated 
               description: '',
               follow_up_date: '',
               location: '',
+              customer_id: customerId || '',
             });
             setShowForm(!showForm);
           }}
@@ -237,6 +271,25 @@ export function AppointmentScheduler({ customerId, leadId, onAppointmentCreated 
         <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              {!customerId && !leadId && (
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Customer *
+                  </label>
+                  <select
+                    value={formData.customer_id}
+                    onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select a customer...</option>
+                    {contacts.map(contact => (
+                      <option key={contact.id} value={contact.id}>{contact.company_name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Appointment Type *
@@ -339,6 +392,11 @@ export function AppointmentScheduler({ customerId, leadId, onAppointmentCreated 
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <h4 className="font-medium text-gray-900">{appointment.subject}</h4>
+                          {appointment.crm_contacts && (
+                            <p className="text-sm font-medium text-blue-600 mt-1">
+                              {appointment.crm_contacts.company_name}
+                            </p>
+                          )}
                           <p className="text-sm text-gray-600 mt-1">
                             {formatAppointmentType(appointment.activity_type)}
                           </p>

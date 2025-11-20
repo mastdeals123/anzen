@@ -156,6 +156,23 @@ export function CustomerDatabase({ canManage }: CustomerDatabaseProps) {
     }
   };
 
+  const downloadSampleCSV = () => {
+    const csvContent = `Company Name,Contact Person,Email,Phone,Country,City,Website,Industry
+Acme Pharmaceuticals,John Smith,john@acme.com,+1-555-0123,USA,New York,https://acme.com,Pharmaceutical
+Global Medtech Inc,Maria Garcia,maria@globalmedtech.com,+44-20-1234-5678,UK,London,https://globalmedtech.com,Medical Devices
+Bio Solutions Ltd,David Chen,david@biosolutions.com,+65-6123-4567,Singapore,Singapore,https://biosolutions.com,Biotechnology`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'contacts_sample_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -585,14 +602,24 @@ export function CustomerDatabase({ canManage }: CustomerDatabaseProps) {
         title="Import Contacts from CSV"
       >
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900 font-medium mb-2">CSV Format Instructions:</p>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• Required column: Company Name</li>
-              <li>• Optional columns: Contact Person, Email, Phone, Country, City, Website, Industry</li>
-              <li>• First row should contain column headers</li>
-              <li>• All contacts will be imported as "Prospect" type</li>
-            </ul>
+          <div className="space-y-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900 font-medium mb-2">CSV Format Instructions:</p>
+              <ul className="text-xs text-blue-800 space-y-1">
+                <li>• Required column: Company Name</li>
+                <li>• Optional columns: Contact Person, Email, Phone, Country, City, Website, Industry</li>
+                <li>• First row should contain column headers</li>
+                <li>• All contacts will be imported as "Prospect" type</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={downloadSampleCSV}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+            >
+              <Upload className="w-4 h-4" />
+              Download Sample CSV Template
+            </button>
           </div>
 
           <div>

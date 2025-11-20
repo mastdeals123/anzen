@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Phone, Calendar, MessageSquare, FileText, Video, MessageCircle, Plus, CheckCircle, Clock } from 'lucide-react';
+import { Phone, Calendar, MessageSquare, FileText, Video, MessageCircle, Plus, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ActivityLoggerProps {
@@ -119,6 +119,26 @@ export function ActivityLogger({ inquiryId, customerId, leadId, onActivityLogged
     } catch (error) {
       console.error('Error completing activity:', error);
       alert('Failed to complete activity. Please try again.');
+    }
+  };
+
+  const handleDelete = async (activityId: string) => {
+    if (!confirm('Are you sure you want to delete this activity? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('crm_activities')
+        .delete()
+        .eq('id', activityId);
+
+      if (error) throw error;
+      loadActivities();
+      onActivityLogged?.();
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+      alert('Failed to delete activity. Please try again.');
     }
   };
 
@@ -318,14 +338,23 @@ export function ActivityLogger({ inquiryId, customerId, leadId, onActivityLogged
                       </p>
                     </div>
 
-                    {!activity.is_completed && activity.follow_up_date && (
+                    <div className="flex items-center gap-2">
+                      {!activity.is_completed && activity.follow_up_date && (
+                        <button
+                          onClick={() => handleComplete(activity.id)}
+                          className="text-sm px-3 py-1 text-green-600 hover:bg-green-50 rounded-lg transition"
+                        >
+                          Mark Complete
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleComplete(activity.id)}
-                        className="text-sm px-3 py-1 text-green-600 hover:bg-green-50 rounded-lg transition"
+                        onClick={() => handleDelete(activity.id)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete activity"
                       >
-                        Mark Complete
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                    )}
+                    </div>
                   </div>
 
                   {activity.description && (
