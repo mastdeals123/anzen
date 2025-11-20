@@ -226,6 +226,7 @@ Deno.serve(async (req: Request) => {
           }
 
           // Insert email into inbox
+          // Note: is_processed is set to false for inquiries so they appear in Command Center and CRM Email Inbox
           const { data: insertedEmail, error: insertError } = await supabase
             .from('crm_email_inbox')
             .insert({
@@ -237,7 +238,7 @@ Deno.serve(async (req: Request) => {
               from_name: fromName,
               body: body,
               received_date: receivedDate.toISOString(),
-              is_processed: isInquiry,
+              is_processed: false,
               is_inquiry: isInquiry,
             })
             .select()
@@ -247,7 +248,7 @@ Deno.serve(async (req: Request) => {
 
           // If it's an inquiry, create inquiry record
           if (isInquiry && parsedData) {
-            const { error: inquiryError } = await supabase
+            const { data: inquiryData, error: inquiryError } = await supabase
               .from('crm_inquiries')
               .insert({
                 inquiry_date: receivedDate.toISOString(),
@@ -271,13 +272,18 @@ Deno.serve(async (req: Request) => {
                 remarks: parsedData.remarks,
                 source_email_id: insertedEmail.id,
                 ai_confidence_score: parsedData.confidenceScore,
-              });
+              })
+              .select()
+              .single();
 
             if (inquiryError) {
-              console.error('Error creating inquiry:', inquiryError);
+              console.error('Error creating inquiry for email:', insertedEmail.id, inquiryError);
+              // Continue processing even if inquiry creation fails
+            } else {
+              console.log('Successfully created inquiry:', inquiryData?.inquiry_number);
             }
 
-            return { processed: true, inquiry: true };
+            return { processed: true, inquiry: !inquiryError };
           }
 
           return { processed: true, inquiry: false };
