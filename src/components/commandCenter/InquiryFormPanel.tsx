@@ -141,32 +141,64 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
         </div>
 
         {email && (
-          <div className="mt-3 bg-white border border-gray-200 rounded-lg">
+          <div className="mt-3 bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => setShowEmailBody(!showEmailBody)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
+              className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition border-b border-gray-200"
             >
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-blue-600" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900">{email.subject}</p>
-                  <p className="text-xs text-gray-500">From: {email.from_name || email.from_email}</p>
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-blue-700">
+                    {(email.from_name || email.from_email).charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <p className="text-base font-semibold text-gray-900 truncate">{email.subject}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-sm text-gray-900 font-medium">{email.from_name || 'Unknown'}</p>
+                    <span className="text-gray-400 text-xs">•</span>
+                    <p className="text-xs text-gray-500 truncate">&lt;{email.from_email}&gt;</p>
+                  </div>
                 </div>
               </div>
               {showEmailBody ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
+                <ChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0 ml-2" />
               )}
             </button>
             {showEmailBody && (
-              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-                <p className="text-xs font-medium text-gray-700 mb-2">Email Body:</p>
-                <div className="bg-white border border-gray-200 rounded p-3 max-h-64 overflow-y-auto">
-                  <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+              <div className="bg-white">
+                <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                    {new Date(email.received_date).toLocaleString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                <div className="px-5 py-6 max-h-[500px] overflow-y-auto">
+                  <div
+                    className="text-sm text-gray-900 leading-relaxed"
+                    style={{
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word'
+                    }}
+                  >
                     {email.body}
-                  </pre>
+                  </div>
+                </div>
+                <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="font-medium">AI has extracted data from this email. Review the form fields below.</span>
+                  </div>
                 </div>
               </div>
             )}
