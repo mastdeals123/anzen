@@ -30,7 +30,11 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { profile, signOut } = useAuth();
   const { language, setLanguage, t } = useLanguage();
-  const { currentPage, setCurrentPage } = useNavigation();
+  const { currentPage, setCurrentPage, sidebarCollapsed, setSidebarCollapsed } = useNavigation();
+
+  // Auto-collapse sidebar for specific pages
+  const autoCollapsiblePages = ['crm', 'command-center'];
+  const shouldAutoCollapse = autoCollapsiblePages.includes(currentPage);
 
   const menuItems = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard, roles: ['admin', 'accounts', 'sales', 'warehouse'] },
@@ -65,17 +69,19 @@ export function Layout({ children }: LayoutProps) {
       />
 
       <aside
-        className={`fixed top-0 left-0 z-30 h-full w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-30 h-full bg-white border-r border-gray-200 transform transition-all lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } flex flex-col`}
+        } ${sidebarCollapsed && shouldAutoCollapse ? 'w-16' : 'w-64'} flex flex-col`}
       >
         <div className="flex items-center justify-between p-3 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Logo" className="h-8 w-8" />
-            <div className="flex flex-col leading-tight">
-              <span className="text-xs font-bold text-gray-900">PT. SHUBHAM ANZEN</span>
-              <span className="text-xs font-bold text-gray-900">PHARMA JAYA</span>
-            </div>
+            <img src={logo} alt="Logo" className="h-8 w-8 flex-shrink-0" />
+            {!(sidebarCollapsed && shouldAutoCollapse) && (
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs font-bold text-gray-900">PT. SHUBHAM ANZEN</span>
+                <span className="text-xs font-bold text-gray-900">PHARMA JAYA</span>
+              </div>
+            )}
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -100,25 +106,39 @@ export function Layout({ children }: LayoutProps) {
                   isActive
                     ? 'bg-blue-50 text-blue-600'
                     : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                } ${sidebarCollapsed && shouldAutoCollapse ? 'justify-center' : ''}`}
+                title={sidebarCollapsed && shouldAutoCollapse ? item.label : undefined}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium text-sm">{item.label}</span>
+                {!(sidebarCollapsed && shouldAutoCollapse) && (
+                  <span className="font-medium text-sm">{item.label}</span>
+                )}
               </button>
             );
           })}
         </nav>
       </aside>
 
-      <div className="lg:pl-64">
+      <div className={`transition-all ${sidebarCollapsed && shouldAutoCollapse ? 'lg:pl-16' : 'lg:pl-64'}`}>
         <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="flex items-center justify-between px-4 py-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded hover:bg-gray-100"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded hover:bg-gray-100"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              {shouldAutoCollapse && (
+                <button
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="hidden lg:block p-2 rounded hover:bg-gray-100"
+                  title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+              )}
+            </div>
 
             <div className="flex-1" />
 

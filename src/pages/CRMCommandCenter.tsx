@@ -30,9 +30,62 @@ export function CRMCommandCenter() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Check if customer exists by email or company name
+      let customerId = null;
+      const { data: existingCustomers } = await supabase
+        .from('customers')
+        .select('id, company_name, contact_email, contact_person, contact_phone, address')
+        .or(`contact_email.eq.${formData.contactEmail},company_name.ilike.${formData.companyName}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingCustomers) {
+        customerId = existingCustomers.id;
+
+        // Update customer info if we have new data
+        const updates: any = {};
+        if (formData.contactPerson && !existingCustomers.contact_person) {
+          updates.contact_person = formData.contactPerson;
+        }
+        if (formData.contactPhone && !existingCustomers.contact_phone) {
+          updates.contact_phone = formData.contactPhone;
+        }
+        if (formData.contactEmail && formData.contactEmail !== existingCustomers.contact_email) {
+          updates.contact_email = formData.contactEmail;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await supabase
+            .from('customers')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', customerId);
+        }
+      } else {
+        // Create new customer
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            company_name: formData.companyName,
+            contact_person: formData.contactPerson || null,
+            contact_email: formData.contactEmail,
+            contact_phone: formData.contactPhone || null,
+            customer_type: 'lead',
+            status: 'active',
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (!customerError && newCustomer) {
+          customerId = newCustomer.id;
+        }
+      }
+
       const inquiryData = {
+        customer_id: customerId,
         inquiry_date: new Date().toISOString().split('T')[0],
         product_name: formData.productName,
+        specification: formData.specification || null,
         quantity: formData.quantity,
         supplier_name: formData.supplierName || null,
         supplier_country: formData.supplierCountry || null,

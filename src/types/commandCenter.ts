@@ -11,6 +11,7 @@ export interface Email {
 
 export interface ParsedEmailData {
   productName: string;
+  specification?: string;
   quantity: string;
   supplierName?: string;
   supplierCountry?: string;

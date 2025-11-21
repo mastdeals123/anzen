@@ -12,6 +12,7 @@ interface InquiryFormPanelProps {
 export interface InquiryFormData {
   inquiryNumber: string;
   productName: string;
+  specification: string;
   quantity: string;
   supplierName: string;
   supplierCountry: string;
@@ -34,6 +35,7 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
   const [formData, setFormData] = useState<InquiryFormData>({
     inquiryNumber: '',
     productName: '',
+    specification: '',
     quantity: '',
     supplierName: '',
     supplierCountry: '',
@@ -56,6 +58,7 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
       setFormData({
         inquiryNumber: '',
         productName: parsedData.productName || '',
+        specification: parsedData.specification || '',
         quantity: parsedData.quantity || '',
         supplierName: parsedData.supplierName || '',
         supplierCountry: parsedData.supplierCountry || '',
@@ -184,15 +187,12 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
                 </div>
                 <div className="px-5 py-6 max-h-[500px] overflow-y-auto">
                   <div
-                    className="text-sm text-gray-900 leading-relaxed"
+                    className="text-sm text-gray-900 leading-relaxed email-content"
                     style={{
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word'
+                      fontFamily: 'system-ui, -apple-system, sans-serif'
                     }}
-                  >
-                    {email.body}
-                  </div>
+                    dangerouslySetInnerHTML={{ __html: email.body }}
+                  />
                 </div>
                 <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">
                   <div className="flex items-center gap-2 text-sm text-blue-700">
@@ -244,6 +244,19 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
                   onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Specification
+                </label>
+                <input
+                  type="text"
+                  value={formData.specification}
+                  onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., BP, Powder / USP Grade / EP Standard"
                 />
               </div>
 
