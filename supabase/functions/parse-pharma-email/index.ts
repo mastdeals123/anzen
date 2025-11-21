@@ -16,6 +16,7 @@ interface EmailParseRequest {
 
 interface ParsedInquiry {
   productName: string;
+  specification?: string;
   quantity: string;
   supplierName?: string;
   supplierCountry?: string;
@@ -86,6 +87,7 @@ Deno.serve(async (req: Request) => {
           error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to Supabase Edge Function secrets.',
           fallbackData: {
             productName: '',
+            specification: null,
             quantity: '',
             companyName: companyFromDomain || 'Unknown Company',
             contactPerson: fromName || null,
@@ -135,26 +137,34 @@ ACCEPT only these:
 - Keywords: "Permintaan Penawaran Harga" (Indonesian for price quotation request), "quotation", "inquiry", "penawaran", "bahan baku"
 
 Extract information for VALID inquiries:
-1. Product name (e.g., "Sodium Hypophosphite Pharma Grade", "Triamcinolone Acetonide USP")
-2. Quantity with units (e.g., "150 KG", "2 MT")
-3. Supplier/Manufacturer name if mentioned
-4. Country of origin if mentioned
-5. Company name from signature
-6. Contact person name
-7. Whether COA (Certificate of Analysis) is requested
-8. Whether MSDS (Material Safety Data Sheet) is requested
-9. Whether sample is requested
-10. Whether price quotation is requested
-11. Expected delivery date
-12. Urgency level
-13. Phone/WhatsApp number
-14. Detect language (Indonesian/English)
-15. Confidence score (0.0 to 1.0) - Set BELOW 0.4 for non-pharma emails
+1. Product name (e.g., "Sodium Hypophosphite Pharma Grade", "Triamcinolone Acetonide USP", "Valacyclovie HCL Hydrate")
+2. Specification/Grade (e.g., "BP, Powder", "USP", "EP", "IP", "JP", "GMP Certified", "Pharma Grade", "Food Grade", "Technical Grade", "India BP, Powder 150 KG")
+3. Quantity with units (e.g., "150 KG", "2 MT", "500 KG")
+4. Supplier/Manufacturer name if mentioned (e.g., "Hetero Drugs", "Sun Pharma", "Aurobindo")
+5. Country of origin if mentioned (e.g., "India", "China", "USA")
+6. Company name from signature
+7. Contact person name
+8. Whether COA (Certificate of Analysis) is requested
+9. Whether MSDS (Material Safety Data Sheet) is requested
+10. Whether sample is requested
+11. Whether price quotation is requested
+12. Expected delivery date (parse formats like "03.04.26", "DD.MM.YY", "DD/MM/YYYY" and convert to YYYY-MM-DD)
+13. Urgency level
+14. Phone/WhatsApp number
+15. Detect language (Indonesian/English)
+16. Confidence score (0.0 to 1.0) - Set BELOW 0.4 for non-pharma emails
+
+Common pharmaceutical specifications to extract:
+- Pharmacopeia standards: BP (British), USP (US), EP (European), IP (Indian), JP (Japanese)
+- Physical forms: Powder, Granules, Liquid, Crystals, Tablets
+- Grades: Pharma Grade, Food Grade, Industrial Grade, Technical Grade, GMP Certified
+- Combine specification parts: "India BP, Powder 150 KG" → specification: "India BP, Powder"
 
 Return a JSON object:
 {
   "isInquiry": boolean,
   "productName": string,
+  "specification": string | null,
   "quantity": string,
   "supplierName": string | null,
   "supplierCountry": string | null,
@@ -166,14 +176,16 @@ Return a JSON object:
   "sampleRequested": boolean,
   "priceRequested": boolean,
   "purposeIcons": string[],
-  "deliveryDateExpected": string | null,
+  "deliveryDateExpected": "YYYY-MM-DD" | null,
   "urgency": "low" | "medium" | "high" | "urgent",
   "remarks": string | null,
   "confidence": "high" | "medium" | "low",
   "confidenceScore": number,
   "detectedLanguage": string,
   "rejectionReason": string | null
-}`;
+}
+
+IMPORTANT: deliveryDateExpected must be in YYYY-MM-DD format. Parse dates like "03.04.26" as "2026-04-03".`;
 
     const userPrompt = `Parse this pharmaceutical inquiry email:
 
@@ -236,13 +248,13 @@ Respond with a JSON object containing the extracted information.`;
         });
     }
 
-    // Check if AI classified this as a valid inquiry
     const isValidInquiry = aiResponse.isInquiry !== false &&
                            (aiResponse.confidenceScore || aiResponse.confidence_score || 0.7) >= 0.4 &&
                            (aiResponse.productName || aiResponse.product_name);
 
     const parsedInquiry: ParsedInquiry = {
       productName: aiResponse.productName || aiResponse.product_name || '',
+      specification: aiResponse.specification || aiResponse.spec || aiResponse.grade || null,
       quantity: aiResponse.quantity || '',
       supplierName: aiResponse.supplierName || aiResponse.supplier_name || aiResponse.supplier || null,
       supplierCountry: aiResponse.supplierCountry || aiResponse.supplier_country || aiResponse.country || null,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -35,6 +35,13 @@ export function Layout({ children }: LayoutProps) {
   // Auto-collapse sidebar for specific pages
   const autoCollapsiblePages = ['crm', 'command-center'];
   const shouldAutoCollapse = autoCollapsiblePages.includes(currentPage);
+
+  // Automatically collapse sidebar when entering CRM or Command Center
+  useEffect(() => {
+    if (shouldAutoCollapse && !sidebarCollapsed) {
+      setSidebarCollapsed(true);
+    }
+  }, [currentPage, shouldAutoCollapse, sidebarCollapsed, setSidebarCollapsed]);
 
   const menuItems = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard, roles: ['admin', 'accounts', 'sales', 'warehouse'] },

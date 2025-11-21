@@ -39,6 +39,7 @@ export interface Inquiry {
   inquiry_number: string;
   inquiry_date: string;
   product_name: string;
+  specification?: string | null;
   quantity: string;
   supplier_name: string | null;
   supplier_country: string | null;

@@ -8,6 +8,66 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Email, ParsedEmailData, Inquiry } from '../types/commandCenter';
 import { CheckCircle2, Zap } from 'lucide-react';
 
+function parseDeliveryDate(dateStr: string | undefined | null): string | null {
+  if (!dateStr) return null;
+
+  const trimmed = dateStr.trim();
+  if (!trimmed) return null;
+
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Handle DD.MM.YY format (e.g., "03.04.26" -> "2026-04-03")
+  const ddmmyyDot = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
+  if (ddmmyyDot) {
+    const day = ddmmyyDot[1].padStart(2, '0');
+    const month = ddmmyyDot[2].padStart(2, '0');
+    const year = parseInt(ddmmyyDot[3]) < 50 ? `20${ddmmyyDot[3]}` : `19${ddmmyyDot[3]}`;
+    return `${year}-${month}-${day}`;
+  }
+
+  // Handle DD/MM/YY format
+  const ddmmyySlash = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (ddmmyySlash) {
+    const day = ddmmyySlash[1].padStart(2, '0');
+    const month = ddmmyySlash[2].padStart(2, '0');
+    const year = parseInt(ddmmyySlash[3]) < 50 ? `20${ddmmyySlash[3]}` : `19${ddmmyySlash[3]}`;
+    return `${year}-${month}-${day}`;
+  }
+
+  // Handle DD/MM/YYYY format
+  const ddmmyyyySlash = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyySlash) {
+    const day = ddmmyyyySlash[1].padStart(2, '0');
+    const month = ddmmyyyySlash[2].padStart(2, '0');
+    const year = ddmmyyyySlash[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Handle DD-MM-YYYY format
+  const ddmmyyyyDash = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddmmyyyyDash) {
+    const day = ddmmyyyyDash[1].padStart(2, '0');
+    const month = ddmmyyyyDash[2].padStart(2, '0');
+    const year = ddmmyyyyDash[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Try parsing as ISO date
+  try {
+    const date = new Date(trimmed);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  } catch (e) {
+    console.warn('Could not parse date:', trimmed);
+  }
+
+  return null;
+}
+
 export function CRMCommandCenter() {
   const { profile } = useAuth();
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -34,8 +94,8 @@ export function CRMCommandCenter() {
       let customerId = null;
       const { data: existingCustomers } = await supabase
         .from('customers')
-        .select('id, company_name, contact_email, contact_person, contact_phone, address')
-        .or(`contact_email.eq.${formData.contactEmail},company_name.ilike.${formData.companyName}`)
+        .select('id, company_name, email, contact_person, phone, address')
+        .or(`email.eq.${formData.contactEmail},company_name.ilike.${formData.companyName}`)
         .limit(1)
         .maybeSingle();
 
@@ -47,11 +107,11 @@ export function CRMCommandCenter() {
         if (formData.contactPerson && !existingCustomers.contact_person) {
           updates.contact_person = formData.contactPerson;
         }
-        if (formData.contactPhone && !existingCustomers.contact_phone) {
-          updates.contact_phone = formData.contactPhone;
+        if (formData.contactPhone && !existingCustomers.phone) {
+          updates.phone = formData.contactPhone;
         }
-        if (formData.contactEmail && formData.contactEmail !== existingCustomers.contact_email) {
-          updates.contact_email = formData.contactEmail;
+        if (formData.contactEmail && formData.contactEmail !== existingCustomers.email) {
+          updates.email = formData.contactEmail;
         }
 
         if (Object.keys(updates).length > 0) {
@@ -65,12 +125,12 @@ export function CRMCommandCenter() {
         const { data: newCustomer, error: customerError } = await supabase
           .from('customers')
           .insert({
+            customer_name: formData.companyName,
             company_name: formData.companyName,
             contact_person: formData.contactPerson || null,
-            contact_email: formData.contactEmail,
-            contact_phone: formData.contactPhone || null,
-            customer_type: 'lead',
-            status: 'active',
+            email: formData.contactEmail,
+            phone: formData.contactPhone || null,
+            is_active: true,
             created_by: user.id,
           })
           .select()
@@ -99,7 +159,7 @@ export function CRMCommandCenter() {
         status: 'new',
         priority: formData.priority,
         purpose_icons: formData.purposeIcons,
-        delivery_date_expected: formData.deliveryDateExpected || null,
+        delivery_date_expected: parseDeliveryDate(formData.deliveryDateExpected),
         ai_confidence_score: parsedData?.confidenceScore || 0.0,
         auto_detected_company: parsedData?.autoDetectedCompany || false,
         auto_detected_contact: parsedData?.autoDetectedContact || false,

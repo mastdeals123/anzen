@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileText, Sparkles, AlertTriangle, CheckCircle2, Calendar, Package, Building2, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type { Email, ParsedEmailData } from '../../types/commandCenter';
 
 interface InquiryFormPanelProps {
@@ -191,7 +192,10 @@ export function InquiryFormPanel({ email, parsedData, onSave, saving }: InquiryF
                     style={{
                       fontFamily: 'system-ui, -apple-system, sans-serif'
                     }}
-                    dangerouslySetInnerHTML={{ __html: email.body }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(email.body, {
+                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'b', 'i', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                      ALLOWED_ATTR: ['style', 'class']
+                    }) }}
                   />
                 </div>
                 <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">

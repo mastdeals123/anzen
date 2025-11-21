@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Edit, Trash2, FileText, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Edit, Trash2, FileText, Calendar, CheckCircle, XCircle, Clock, Flame, ArrowUp, Minus } from 'lucide-react';
 import { Modal } from '../Modal';
 
 interface Inquiry {
@@ -8,6 +8,7 @@ interface Inquiry {
   inquiry_number: string;
   inquiry_date: string;
   product_name: string;
+  specification?: string | null;
   quantity: string;
   supplier_name: string | null;
   supplier_country: string | null;
@@ -66,6 +67,19 @@ export function InquiryTable({ inquiries, onEdit, onDelete, onRefresh, canManage
     low: { label: 'LOW', color: 'bg-gray-100 text-gray-800' },
   };
 
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return <Flame className="w-4 h-4 text-red-600" title="Urgent" />;
+      case 'high':
+        return <ArrowUp className="w-4 h-4 text-orange-600" title="High" />;
+      case 'medium':
+      case 'low':
+      default:
+        return <Minus className="w-4 h-4 text-gray-400" title={priority === 'low' ? 'Low' : 'Medium'} />;
+    }
+  };
+
   const toggleDocument = async (inquiry: Inquiry, docType: 'coa' | 'msds' | 'sample' | 'price') => {
     setUpdatingDocument(true);
     try {
@@ -108,14 +122,15 @@ export function InquiryTable({ inquiries, onEdit, onDelete, onRefresh, canManage
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="px-2 py-2 text-center font-semibold text-gray-700" title="Priority">⚡</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">No.</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">Date</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700">Product</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700">Specification</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700">Qty</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700">Supplier</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700">Company</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-700">Priority</th>
                 <th className="px-3 py-2 text-center font-semibold text-gray-700">Docs</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700">Remarks</th>
                 {canManage && <th className="px-3 py-2 text-center font-semibold text-gray-700">Actions</th>}
@@ -124,13 +139,16 @@ export function InquiryTable({ inquiries, onEdit, onDelete, onRefresh, canManage
             <tbody className="divide-y divide-gray-200">
               {inquiries.length === 0 ? (
                 <tr>
-                  <td colSpan={canManage ? 11 : 10} className="px-3 py-8 text-center text-gray-500">
+                  <td colSpan={canManage ? 12 : 11} className="px-3 py-8 text-center text-gray-500">
                     No inquiries found
                   </td>
                 </tr>
               ) : (
                 inquiries.map((inquiry) => (
                   <tr key={inquiry.id} className="hover:bg-gray-50 transition">
+                    <td className="px-2 py-2 text-center">
+                      {getPriorityIcon(inquiry.priority)}
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <button
                         onClick={() => viewDetails(inquiry)}
@@ -145,6 +163,11 @@ export function InquiryTable({ inquiries, onEdit, onDelete, onRefresh, canManage
                     <td className="px-3 py-2 max-w-xs">
                       <div className="truncate" title={inquiry.product_name}>
                         {inquiry.product_name}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 max-w-xs">
+                      <div className="truncate text-gray-600 text-xs" title={inquiry.specification || ''}>
+                        {inquiry.specification || '-'}
                       </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{inquiry.quantity}</td>
@@ -166,11 +189,6 @@ export function InquiryTable({ inquiries, onEdit, onDelete, onRefresh, canManage
                     <td className="px-3 py-2 whitespace-nowrap">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${statusConfig[inquiry.status as keyof typeof statusConfig]?.color || 'bg-gray-100 text-gray-800'}`}>
                         {statusConfig[inquiry.status as keyof typeof statusConfig]?.label || inquiry.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${priorityConfig[inquiry.priority as keyof typeof priorityConfig]?.color || 'bg-gray-100 text-gray-800'}`}>
-                        {priorityConfig[inquiry.priority as keyof typeof priorityConfig]?.label || inquiry.priority}
                       </span>
                     </td>
                     <td className="px-3 py-2">
