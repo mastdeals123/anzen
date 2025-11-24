@@ -19,6 +19,7 @@ import {
   Globe,
   Truck,
   Zap,
+  CheckSquare,
 } from 'lucide-react';
 import logo from '../assets/Untitled-1.svg';
 
@@ -54,6 +55,7 @@ export function Layout({ children }: LayoutProps) {
     { id: 'finance', label: t('nav.finance'), icon: DollarSign, roles: ['admin', 'accounts'] },
     { id: 'crm', label: t('nav.crm'), icon: UserCircle, roles: ['admin', 'sales'] },
     { id: 'command-center', label: 'Command Center', icon: Zap, roles: ['admin', 'sales'] },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, roles: ['admin', 'accounts', 'sales', 'warehouse'] },
     { id: 'inventory', label: t('nav.inventory'), icon: Warehouse, roles: ['admin', 'warehouse'] },
     { id: 'settings', label: t('nav.settings'), icon: Settings, roles: ['admin'] },
   ];

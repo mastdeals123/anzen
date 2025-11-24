@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Plus, Mail, Calendar as CalendarIcon, LayoutGrid, Users, Table, Inbox, Activity, Clock } from 'lucide-react';
 import { EmailInbox } from '../components/crm/EmailInbox';
-import { InquiryTable } from '../components/crm/InquiryTable';
+import { InquiryTableExcel } from '../components/crm/InquiryTableExcel';
 import { ReminderCalendar } from '../components/crm/ReminderCalendar';
 import { PipelineBoard } from '../components/crm/PipelineBoard';
 import { EmailComposer } from '../components/crm/EmailComposer';
@@ -214,13 +214,6 @@ export function CRM() {
 
   const canManage = profile?.role === 'admin' || profile?.role === 'sales';
 
-  const stats = {
-    total: inquiries.length,
-    new: inquiries.filter(i => i.status === 'new').length,
-    priceQuoted: inquiries.filter(i => i.status === 'price_quoted').length,
-    won: inquiries.filter(i => i.status === 'won').length,
-  };
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -241,25 +234,6 @@ export function CRM() {
               Add Inquiry
             </button>
           )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-sm text-gray-600">Total Inquiries</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg shadow p-6">
-            <p className="text-sm text-gray-600">New</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{stats.new}</p>
-          </div>
-          <div className="bg-blue-50 rounded-lg shadow p-6">
-            <p className="text-sm text-blue-600">Price Quoted</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.priceQuoted}</p>
-          </div>
-          <div className="bg-green-50 rounded-lg shadow p-6">
-            <p className="text-sm text-green-600">Won</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">{stats.won}</p>
-          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow">
@@ -351,10 +325,8 @@ export function CRM() {
             )}
 
             {activeTab === 'table' && (
-              <InquiryTable
+              <InquiryTableExcel
                 inquiries={inquiries}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
                 onRefresh={loadInquiries}
                 canManage={canManage}
               />

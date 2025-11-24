@@ -11,6 +11,7 @@ import { Batches } from './pages/Batches';
 import { Inventory } from './pages/Inventory';
 import { CRM } from './pages/CRM';
 import { CRMCommandCenter } from './pages/CRMCommandCenter';
+import { Tasks } from './pages/Tasks';
 import { DeliveryChallan } from './pages/DeliveryChallan';
 import { Sales } from './pages/Sales';
 import { Finance } from './pages/Finance';
@@ -70,6 +71,8 @@ function AppContent() {
         return <CRM />;
       case 'command-center':
         return <CRMCommandCenter />;
+      case 'tasks':
+        return <Tasks />;
       case 'delivery-challan':
         return <DeliveryChallan />;
       case 'sales':
