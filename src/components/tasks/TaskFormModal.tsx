@@ -136,15 +136,15 @@ export function TaskFormModal({ isOpen, onClose, onSuccess, initialData }: TaskF
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, product_code')
+        .select('id, product_name, product_code')
         .eq('is_active', true)
-        .order('name');
+        .order('product_name');
 
       if (error) throw error;
 
       setProducts((data || []).map(p => ({
         id: p.id,
-        label: `${p.name}${p.product_code ? ` (${p.product_code})` : ''}`
+        label: `${p.product_name}${p.product_code ? ` (${p.product_code})` : ''}`
       })));
     } catch (error) {
       console.error('Error loading products:', error);

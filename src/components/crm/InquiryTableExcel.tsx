@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import * as XLSX from 'xlsx';
 import {
   ChevronDown, X, Mail, Phone, FileText, Calendar,
-  Flame, ArrowUp, Minus, Send, MessageSquare, CheckSquare
+  Flame, ArrowUp, Minus, Send, MessageSquare, CheckSquare,
+  Download, FileSpreadsheet, ArrowUpDown, ArrowDown
 } from 'lucide-react';
 import { Modal } from '../Modal';
-import { EmailComposerEnhanced } from './EmailComposerEnhanced';
+import { GmailLikeComposer } from './GmailLikeComposer';
 import { TaskFormModal } from '../tasks/TaskFormModal';
 
 interface Inquiry {
@@ -47,6 +49,7 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
   const [filters, setFilters] = useState<ColumnFilter[]>([]);
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [filteredData, setFilteredData] = useState<Inquiry[]>(inquiries);
+  const [sortConfig, setSortConfig] = useState<{ column: string; direction: 'asc' | 'desc' | null }>({ column: '', direction: null });
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -57,6 +60,7 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpNotes, setFollowUpNotes] = useState('');
   const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
   const statusOptions = [
@@ -79,8 +83,8 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
   ];
 
   useEffect(() => {
-    applyFilters();
-  }, [inquiries, filters]);
+    applyFiltersAndSort();
+  }, [inquiries, filters, sortConfig]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -92,9 +96,10 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const applyFilters = () => {
+  const applyFiltersAndSort = () => {
     let result = [...inquiries];
 
+    // Apply filters
     filters.forEach(filter => {
       if (filter.values.length > 0) {
         result = result.filter(row => {
@@ -104,7 +109,157 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
       }
     });
 
+    // Apply sorting
+    if (sortConfig.column && sortConfig.direction) {
+      result.sort((a, b) => {
+        const aValue = a[sortConfig.column as keyof Inquiry];
+        const bValue = b[sortConfig.column as keyof Inquiry];
+
+        // Handle null/undefined values
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (bValue == null) return sortConfig.direction === 'asc' ? -1 : 1;
+
+        // Convert to strings for comparison
+        const aStr = String(aValue).toLowerCase();
+        const bStr = String(bValue).toLowerCase();
+
+        if (sortConfig.direction === 'asc') {
+          return aStr > bStr ? 1 : aStr < bStr ? -1 : 0;
+        } else {
+          return aStr < bStr ? 1 : aStr > bStr ? -1 : 0;
+        }
+      });
+    }
+
     setFilteredData(result);
+  };
+
+  const handleSort = (column: string) => {
+    let direction: 'asc' | 'desc' | null = 'asc';
+
+    if (sortConfig.column === column) {
+      if (sortConfig.direction === 'asc') {
+        direction = 'desc';
+      } else if (sortConfig.direction === 'desc') {
+        direction = null;
+      }
+    }
+
+    setSortConfig({ column, direction });
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortConfig.column !== column) {
+      return <ArrowUpDown className="w-3 h-3 text-gray-400" />;
+    }
+    if (sortConfig.direction === 'asc') {
+      return <ArrowUp className="w-3 h-3 text-blue-600" />;
+    }
+    if (sortConfig.direction === 'desc') {
+      return <ArrowDown className="w-3 h-3 text-blue-600" />;
+    }
+    return <ArrowUpDown className="w-3 h-3 text-gray-400" />;
+  };
+
+  const exportToExcel = () => {
+    setExporting(true);
+
+    try {
+      const exportData = filteredData.map(inquiry => ({
+        'No.': inquiry.inquiry_number,
+        'Date': new Date(inquiry.inquiry_date).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }),
+        'Product': inquiry.product_name,
+        'Specification': inquiry.specification || '-',
+        'Qty': inquiry.quantity,
+        'Supplier': inquiry.supplier_name || '-',
+        'Country': inquiry.supplier_country || '-',
+        'Company': inquiry.company_name,
+        'Status': statusOptions.find(s => s.value === inquiry.status)?.label || inquiry.status,
+        'Priority': priorityOptions.find(p => p.value === inquiry.priority)?.label || inquiry.priority,
+        'Remarks': inquiry.remarks || '-',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 12 },  // No.
+        { wch: 12 },  // Date
+        { wch: 30 },  // Product
+        { wch: 20 },  // Specification
+        { wch: 10 },  // Qty
+        { wch: 20 },  // Supplier
+        { wch: 12 },  // Country
+        { wch: 25 },  // Company
+        { wch: 15 },  // Status
+        { wch: 10 },  // Priority
+        { wch: 30 },  // Remarks
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'CRM Inquiries');
+
+      const fileName = `CRM-Inquiries-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      alert(`Exported ${exportData.length} inquiries to ${fileName}`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportToCSV = () => {
+    setExporting(true);
+
+    try {
+      const exportData = filteredData.map(inquiry => ({
+        'No.': inquiry.inquiry_number,
+        'Date': new Date(inquiry.inquiry_date).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }),
+        'Product': inquiry.product_name,
+        'Specification': inquiry.specification || '-',
+        'Qty': inquiry.quantity,
+        'Supplier': inquiry.supplier_name || '-',
+        'Country': inquiry.supplier_country || '-',
+        'Company': inquiry.company_name,
+        'Status': statusOptions.find(s => s.value === inquiry.status)?.label || inquiry.status,
+        'Priority': priorityOptions.find(p => p.value === inquiry.priority)?.label || inquiry.priority,
+        'Remarks': inquiry.remarks || '-',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const csv = XLSX.utils.sheet_to_csv(ws);
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `CRM-Inquiries-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert(`Exported ${exportData.length} inquiries to CSV. You can import this file to Google Sheets.`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const toggleFilter = (column: string, value: string) => {
@@ -294,6 +449,34 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
 
   return (
     <div className="space-y-4">
+      {/* Export Buttons */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportToExcel}
+            disabled={exporting || filteredData.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            title="Export to Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            {exporting ? 'Exporting...' : 'Export to Excel'}
+          </button>
+          <button
+            onClick={exportToCSV}
+            disabled={exporting || filteredData.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            title="Export to CSV for Google Sheets"
+          >
+            <Download className="w-4 h-4" />
+            {exporting ? 'Exporting...' : 'Export to CSV'}
+          </button>
+          <div className="text-sm text-gray-600 ml-2">
+            {filteredData.length} {filteredData.length === 1 ? 'inquiry' : 'inquiries'}
+            {filters.length > 0 && ' (filtered)'}
+            {sortConfig.direction && ' (sorted)'}
+          </div>
+        </div>
+      </div>
       {/* Quick Actions Bar */}
       {selectedRows.size > 0 && canManage && selectedInquiry && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -366,39 +549,81 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
                   />
                 </th>
 
-                {/* Inquiry Number */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  No.
+                {/* Inquiry Number - Sortable */}
+                <th
+                  onClick={() => handleSort('inquiry_number')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>No.</span>
+                    {getSortIcon('inquiry_number')}
+                  </div>
                 </th>
 
-                {/* Date */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  Date
+                {/* Date - Sortable */}
+                <th
+                  onClick={() => handleSort('inquiry_date')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Date</span>
+                    {getSortIcon('inquiry_date')}
+                  </div>
                 </th>
 
-                {/* Product */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[200px]">
-                  Product
+                {/* Product - Sortable */}
+                <th
+                  onClick={() => handleSort('product_name')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[200px] cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Product</span>
+                    {getSortIcon('product_name')}
+                  </div>
                 </th>
 
-                {/* Specification */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[150px]">
-                  Specification
+                {/* Specification - Sortable */}
+                <th
+                  onClick={() => handleSort('specification')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[150px] cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Specification</span>
+                    {getSortIcon('specification')}
+                  </div>
                 </th>
 
-                {/* Quantity */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300">
-                  Qty
+                {/* Quantity - Sortable */}
+                <th
+                  onClick={() => handleSort('quantity')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Qty</span>
+                    {getSortIcon('quantity')}
+                  </div>
                 </th>
 
-                {/* Supplier */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[150px]">
-                  Supplier
+                {/* Supplier - Sortable */}
+                <th
+                  onClick={() => handleSort('supplier_name')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[150px] cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Supplier</span>
+                    {getSortIcon('supplier_name')}
+                  </div>
                 </th>
 
-                {/* Company */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[150px]">
-                  Company
+                {/* Company - Sortable */}
+                <th
+                  onClick={() => handleSort('company_name')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[150px] cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Company</span>
+                    {getSortIcon('company_name')}
+                  </div>
                 </th>
 
                 {/* Status with filter */}
@@ -490,9 +715,15 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
                   )}
                 </th>
 
-                {/* Remarks */}
-                <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[200px]">
-                  Remarks
+                {/* Remarks - Sortable */}
+                <th
+                  onClick={() => handleSort('remarks')}
+                  className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[200px] cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Remarks</span>
+                    {getSortIcon('remarks')}
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -712,9 +943,9 @@ export function InquiryTableExcel({ inquiries, onRefresh, canManage }: InquiryTa
         </div>
       </div>
 
-      {/* Email Composer Modal */}
+      {/* Gmail-like Email Composer Modal */}
       {emailModalOpen && selectedInquiryForEmail && (
-        <EmailComposerEnhanced
+        <GmailLikeComposer
           isOpen={emailModalOpen}
           onClose={() => {
             setEmailModalOpen(false);

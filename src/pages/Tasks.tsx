@@ -88,7 +88,7 @@ export function Tasks() {
           creator:created_by(full_name),
           inquiry:crm_inquiries(inquiry_number),
           customer:customers(company_name),
-          product:products(name)
+          product:products(product_name)
         `)
         .eq('is_deleted', false)
         .order('deadline', { ascending: true });
@@ -115,7 +115,7 @@ export function Tasks() {
         creator_name: task.creator?.full_name,
         inquiry_number: task.inquiry?.inquiry_number,
         customer_name: task.customer?.company_name,
-        product_name: task.product?.name,
+        product_name: task.product?.product_name,
         comment_count: commentCountMap[task.id] || 0
       }));
 
