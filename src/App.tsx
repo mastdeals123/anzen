@@ -18,6 +18,9 @@ import { Finance } from './pages/Finance';
 import { Settings } from './pages/Settings';
 import { Setup } from './pages/Setup';
 import { GmailCallback } from './pages/GmailCallback';
+import SalesOrders from './pages/SalesOrders';
+import ImportRequirements from './pages/ImportRequirements';
+import { ApprovalNotifications } from './components/ApprovalNotifications';
 import { initializeNotificationChecks } from './utils/notifications';
 
 function AppContent() {
@@ -67,6 +70,10 @@ function AppContent() {
         return <Inventory />;
       case 'customers':
         return <Customers />;
+      case 'sales-orders':
+        return <SalesOrders />;
+      case 'import-requirements':
+        return <ImportRequirements />;
       case 'crm':
         return <CRM />;
       case 'command-center':
@@ -86,7 +93,12 @@ function AppContent() {
     }
   };
 
-  return renderPage();
+  return (
+    <>
+      {renderPage()}
+      <ApprovalNotifications />
+    </>
+  );
 }
 
 function App() {
