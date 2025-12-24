@@ -348,10 +348,22 @@ export function Products() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               >
-                <option value="kg">Kilogram</option>
-                <option value="litre">Litre</option>
-                <option value="ton">Ton</option>
-                <option value="piece">Piece</option>
+                <optgroup label="Weight">
+                  <option value="mg">Milligram (mg)</option>
+                  <option value="g">Gram (g)</option>
+                  <option value="kg">Kilogram (kg)</option>
+                  <option value="ton">Ton</option>
+                </optgroup>
+                <optgroup label="Volume">
+                  <option value="ml">Millilitre (ml)</option>
+                  <option value="litre">Litre</option>
+                </optgroup>
+                <optgroup label="Count/Package">
+                  <option value="piece">Piece</option>
+                  <option value="bottle">Bottle</option>
+                  <option value="box">Box</option>
+                  <option value="pack">Pack</option>
+                </optgroup>
               </select>
             </div>
 

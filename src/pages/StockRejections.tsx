@@ -20,6 +20,7 @@ interface StockRejection {
   product: {
     product_name: string;
     product_code: string;
+    unit: string;
   };
   batch: {
     batch_number: string;
@@ -86,7 +87,7 @@ export default function StockRejections() {
         .from('stock_rejections')
         .select(`
           *,
-          product:products(product_name, product_code),
+          product:products(product_name, product_code, unit),
           batch:batches(batch_number, current_stock)
         `)
         .order('created_at', { ascending: false });
