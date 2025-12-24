@@ -26,40 +26,55 @@ interface GmailMessage {
 function decodeBase64Url(str: string): string {
   try {
     const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-    return atob(base64);
+    const binaryString = atob(base64);
+
+    // Convert binary string to Uint8Array
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // Decode as UTF-8
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(bytes);
   } catch {
     return '';
   }
 }
 
 function extractEmailBody(payload: any): string {
+  let htmlBody = '';
+  let textBody = '';
+
+  function traverse(part: any) {
+    if (part.mimeType === 'text/html' && part.body?.data) {
+      const decoded = decodeBase64Url(part.body.data);
+      if (decoded && decoded.length > htmlBody.length) {
+        htmlBody = decoded;
+      }
+    } else if (part.mimeType === 'text/plain' && part.body?.data) {
+      const decoded = decodeBase64Url(part.body.data);
+      if (decoded && decoded.length > textBody.length) {
+        textBody = decoded;
+      }
+    }
+
+    if (part.parts && Array.isArray(part.parts)) {
+      for (const subPart of part.parts) {
+        traverse(subPart);
+      }
+    }
+  }
+
   if (payload.body?.data) {
     return decodeBase64Url(payload.body.data);
   }
 
   if (payload.parts) {
-    for (const part of payload.parts) {
-      if (part.mimeType === 'text/plain' && part.body?.data) {
-        return decodeBase64Url(part.body.data);
-      }
-    }
-
-    for (const part of payload.parts) {
-      if (part.mimeType === 'text/html' && part.body?.data) {
-        const html = decodeBase64Url(part.body.data);
-        return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-      }
-    }
-
-    for (const part of payload.parts) {
-      if (part.parts) {
-        const nested = extractEmailBody(part);
-        if (nested) return nested;
-      }
-    }
+    traverse(payload);
   }
 
-  return '';
+  return htmlBody || textBody || '';
 }
 
 function getHeader(headers: Array<{ name: string; value: string }>, name: string): string {
@@ -86,10 +101,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: connections, error: connectionsError } = await supabase
-      .from('crm_gmail_connections')
+      .from('gmail_connections')
       .select('*')
       .eq('user_id', user.id)
-      .eq('is_active', true);
+      .eq('is_connected', true)
+      .eq('sync_enabled', true);
 
     if (connectionsError) throw connectionsError;
     if (!connections || connections.length === 0) {
@@ -102,12 +118,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    let totalMessages = 0;
     let totalProcessed = 0;
     let totalInquiries = 0;
 
     for (const connection of connections) {
       try {
-        const tokenExpiry = new Date(connection.token_expiry);
+        const tokenExpiry = new Date(connection.access_token_expires_at);
         let accessToken = connection.access_token;
 
         if (tokenExpiry <= new Date()) {
@@ -131,10 +148,10 @@ Deno.serve(async (req: Request) => {
           accessToken = refreshData.access_token;
 
           await supabase
-            .from('crm_gmail_connections')
+            .from('gmail_connections')
             .update({
               access_token: accessToken,
-              token_expiry: new Date(Date.now() + refreshData.expires_in * 1000).toISOString(),
+              access_token_expires_at: new Date(Date.now() + refreshData.expires_in * 1000).toISOString(),
             })
             .eq('id', connection.id);
         }
@@ -155,6 +172,7 @@ Deno.serve(async (req: Request) => {
 
         const messagesData = await messagesResponse.json();
         const messageList = messagesData.messages || [];
+        totalMessages += messageList.length;
 
         const batchPromises = messageList.slice(0, 5).map(async (message: { id: string }) => {
           try {
@@ -201,6 +219,7 @@ Deno.serve(async (req: Request) => {
                   emailBody: body,
                   fromEmail: fromEmail,
                   fromName: fromName,
+                  receivedDate: receivedDate.toISOString(),
                 }),
               });
 
@@ -261,7 +280,7 @@ Deno.serve(async (req: Request) => {
         totalInquiries += validResults.filter(r => r.inquiry).length;
 
         await supabase
-          .from('crm_gmail_connections')
+          .from('gmail_connections')
           .update({ last_sync: new Date().toISOString() })
           .eq('id', connection.id);
 
@@ -273,8 +292,9 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        processed: totalProcessed,
-        inquiries: totalInquiries,
+        totalMessages,
+        processedCount: totalProcessed,
+        newInquiriesCount: totalInquiries,
       }),
       {
         headers: {
