@@ -799,6 +799,13 @@ export function Sales() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Validate that invoice has at least one item with a product selected
+      const validItems = items.filter(item => item.product_id && item.product_id.trim() !== '');
+      if (validItems.length === 0) {
+        alert('Please add at least one product to the invoice before saving.');
+        return;
+      }
+
       const totals = calculateTotals();
 
       // Calculate due date based on payment terms
@@ -890,15 +897,18 @@ export function Sales() {
         invoice = newInvoice;
       }
 
-      const invoiceItemsData = items.map(item => ({
-        invoice_id: invoice.id,
-        product_id: item.product_id,
-        batch_id: item.batch_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        tax_rate: item.tax_rate,
-        delivery_challan_item_id: item.delivery_challan_item_id || null,
-      }));
+      // Filter and map only valid items (with product_id)
+      const invoiceItemsData = items
+        .filter(item => item.product_id && item.product_id.trim() !== '')
+        .map(item => ({
+          invoice_id: invoice.id,
+          product_id: item.product_id,
+          batch_id: item.batch_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tax_rate: item.tax_rate,
+          delivery_challan_item_id: item.delivery_challan_item_id || null,
+        }));
 
       const { error: itemsError } = await supabase
         .from('sales_invoice_items')
