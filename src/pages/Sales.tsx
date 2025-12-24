@@ -850,10 +850,24 @@ export function Sales() {
         if (updateError) throw updateError;
         invoice = updatedInvoice;
       } else {
+        // Check if invoice number already exists and regenerate if needed
+        let invoiceNumber = formData.invoice_number;
+        const { data: existingInvoice } = await supabase
+          .from('sales_invoices')
+          .select('invoice_number')
+          .eq('invoice_number', invoiceNumber)
+          .maybeSingle();
+
+        if (existingInvoice) {
+          // Invoice number already exists, generate a new one
+          invoiceNumber = await generateNextInvoiceNumber();
+          setFormData(prev => ({ ...prev, invoice_number: invoiceNumber }));
+        }
+
         const { data: newInvoice, error: invoiceError } = await supabase
           .from('sales_invoices')
           .insert([{
-            invoice_number: formData.invoice_number,
+            invoice_number: invoiceNumber,
             customer_id: formData.customer_id,
             invoice_date: formData.invoice_date,
             due_date: dueDate.toISOString().split('T')[0],
