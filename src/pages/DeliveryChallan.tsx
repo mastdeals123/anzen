@@ -628,8 +628,14 @@ export function DeliveryChallan() {
           p_new_items: itemsForRpc
         });
 
-        if (rpcError) throw rpcError;
-        if (!rpcResult?.success) throw new Error(rpcResult?.error || 'Failed to update DC items');
+        if (rpcError) {
+          console.error('RPC Error:', rpcError);
+          throw new Error(`Failed to update DC: ${rpcError.message}`);
+        }
+        if (!rpcResult?.success) {
+          console.error('RPC Result Error:', rpcResult?.error);
+          throw new Error(rpcResult?.error || 'Failed to update DC items');
+        }
 
         challanId = updatedChallan.id;
       } else {
@@ -707,13 +713,17 @@ export function DeliveryChallan() {
       alert(`Delivery Challan ${editingChallan ? 'updated' : 'created'} successfully!`);
     } catch (error: any) {
       console.error('Error saving challan:', error);
-      const errorMessage = error?.message || 'Unknown error occurred';
-      if (errorMessage.includes('batch_id')) {
-        alert('Error: Invalid batch selection. Please ensure all items have a valid batch selected.');
+      console.error('Full error object:', JSON.stringify(error, null, 2));
+      const errorMessage = error?.message || error?.error_description || error?.msg || 'Unknown error occurred';
+
+      if (errorMessage.toLowerCase().includes('insufficient stock')) {
+        alert(`Cannot save: ${errorMessage}\n\nPlease reduce quantities or select different batches with more stock.`);
+      } else if (errorMessage.includes('batch_id')) {
+        alert(`Error: Invalid batch selection.\n\n${errorMessage}\n\nPlease ensure all items have a valid batch selected.`);
       } else if (errorMessage.includes('foreign key')) {
-        alert('Error: Invalid product or batch selection. Please check your selections.');
+        alert(`Error: Invalid product or batch selection.\n\n${errorMessage}\n\nPlease check your selections.`);
       } else {
-        alert(`Failed to save challan: ${errorMessage}`);
+        alert(`Failed to save challan:\n\n${errorMessage}`);
       }
     }
   };
@@ -757,7 +767,7 @@ export function DeliveryChallan() {
   };
 
   const handleApproveChallan = async (challanId: string) => {
-    if (!confirm('Approve this Delivery Challan? It will be available for invoice creation.')) return;
+    if (!confirm('Approve this Delivery Challan? Stock will be deducted and it will be available for invoice creation.')) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -772,13 +782,23 @@ export function DeliveryChallan() {
         })
         .eq('id', challanId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Approval error:', error);
+        const errorMsg = error.message || error.hint || 'Unknown error';
+        throw new Error(errorMsg);
+      }
 
       alert('Delivery Challan approved successfully!');
       loadChallans();
     } catch (error: any) {
-      console.error('Error approving challan:', error.message);
-      alert('Failed to approve challan');
+      console.error('Error approving challan:', error);
+      const errorMessage = error?.message || 'Unknown error';
+
+      if (errorMessage.toLowerCase().includes('insufficient stock')) {
+        alert(`Cannot approve - Insufficient Stock!\n\n${errorMessage}\n\nPlease edit the DC and reduce quantities or select different batches.`);
+      } else {
+        alert(`Failed to approve challan:\n\n${errorMessage}`);
+      }
     }
   };
 
