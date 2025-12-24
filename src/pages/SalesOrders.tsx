@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Layout } from '../components/Layout';
-import { FileText, Plus, Search, Filter, Eye, Edit, Trash2, XCircle, FileCheck, CheckCircle, Paperclip, Download, ExternalLink } from 'lucide-react';
+import { FileText, Plus, Search, Filter, Eye, Edit, Trash2, XCircle, FileCheck, CheckCircle, Paperclip, Download, ExternalLink, FileOutput } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import SalesOrderForm from '../components/SalesOrderForm';
+import { ProformaInvoiceView } from '../components/ProformaInvoiceView';
 
 interface Customer {
   id: string;
@@ -42,6 +43,7 @@ interface SalesOrder {
   customer_po_date: string;
   customer_po_file_url?: string;
   so_date: string;
+  currency: string;
   expected_delivery_date?: string;
   notes?: string;
   status: string;
@@ -81,6 +83,8 @@ export default function SalesOrders() {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveReason, setArchiveReason] = useState('');
   const [orderToArchive, setOrderToArchive] = useState<string | null>(null);
+  const [showProformaModal, setShowProformaModal] = useState(false);
+  const [proformaOrder, setProformaOrder] = useState<SalesOrder | null>(null);
 
   useEffect(() => {
     fetchSalesOrders();
@@ -100,7 +104,13 @@ export default function SalesOrders() {
           *,
           customers (
             id,
-            company_name
+            company_name,
+            address,
+            city,
+            phone,
+            npwp,
+            pharmacy_license,
+            gst_vat_type
           ),
           sales_order_items (
             id,
@@ -118,7 +128,8 @@ export default function SalesOrders() {
             products (
               id,
               product_name,
-              product_code
+              product_code,
+              unit
             )
           )
         `);
@@ -154,6 +165,11 @@ export default function SalesOrders() {
     } catch (error: any) {
       console.error('Error fetching customers:', error.message);
     }
+  };
+
+  const formatCurrency = (amount: number, currency: string) => {
+    const formatted = amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return currency === 'USD' ? `$ ${formatted}` : `Rp ${formatted}`;
   };
 
   const filterOrders = () => {
@@ -463,26 +479,26 @@ export default function SalesOrders() {
         </nav>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Total Orders</div>
-          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-6">
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Total Orders</div>
+          <div className="text-xl md:text-2xl font-bold text-gray-900">{stats.total}</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Pending Approval</div>
-          <div className="text-2xl font-bold text-yellow-600">{stats.pending_approval}</div>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Pending Approval</div>
+          <div className="text-xl md:text-2xl font-bold text-yellow-600">{stats.pending_approval}</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Stock Reserved</div>
-          <div className="text-2xl font-bold text-blue-600">{stats.stock_reserved}</div>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Stock Reserved</div>
+          <div className="text-xl md:text-2xl font-bold text-blue-600">{stats.stock_reserved}</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Shortage</div>
-          <div className="text-2xl font-bold text-orange-600">{stats.shortage}</div>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Shortage</div>
+          <div className="text-xl md:text-2xl font-bold text-orange-600">{stats.shortage}</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Delivered</div>
-          <div className="text-2xl font-bold text-green-600">{stats.delivered}</div>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Delivered</div>
+          <div className="text-xl md:text-2xl font-bold text-green-600">{stats.delivered}</div>
         </div>
       </div>
 
@@ -527,6 +543,7 @@ export default function SalesOrders() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SO Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Delivery Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Docs</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status / Approval</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -534,13 +551,13 @@ export default function SalesOrders() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                     No sales orders found
                   </td>
                 </tr>
@@ -564,7 +581,23 @@ export default function SalesOrders() {
                       {order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      Rp {order.total_amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      {formatCurrency(order.total_amount, order.currency || 'IDR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center justify-center">
+                        {order.customer_po_file_url ? (
+                          <button
+                            onClick={() => handleViewPO(order.customer_po_file_url!)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition"
+                            title="View Customer PO"
+                          >
+                            <FileText className="w-4 h-4" />
+                            <span className="text-sm font-medium">1</span>
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
@@ -611,16 +644,17 @@ export default function SalesOrders() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {order.customer_po_file_url && (
-                          <button
-                            onClick={() => handleViewPO(order.customer_po_file_url!)}
-                            className="text-purple-600 hover:text-purple-800"
-                            title="View Customer PO"
-                          >
-                            <Paperclip className="w-4 h-4" />
-                          </button>
-                        )}
-                        {(order.status === 'draft' || order.status === 'rejected') && (
+                        <button
+                          onClick={() => {
+                            setProformaOrder(order);
+                            setShowProformaModal(true);
+                          }}
+                          className="text-purple-600 hover:text-purple-800"
+                          title="View Proforma Invoice"
+                        >
+                          <FileOutput className="w-4 h-4" />
+                        </button>
+                        {!['delivered', 'closed', 'cancelled', 'partially_delivered', 'pending_delivery'].includes(order.status) && (
                           <button
                             onClick={() => handleEditOrder(order)}
                             className="text-indigo-600 hover:text-indigo-800"
@@ -758,6 +792,22 @@ export default function SalesOrders() {
               </div>
             )}
 
+            {selectedOrder.customer_po_file_url && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Customer PO Attachment</label>
+                <a
+                  href={selectedOrder.customer_po_file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition"
+                >
+                  <Paperclip className="w-4 h-4" />
+                  <span className="text-sm font-medium">View Customer PO</span>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">Items</label>
               <table className="w-full text-sm">
@@ -774,15 +824,15 @@ export default function SalesOrders() {
                     <tr key={item.id} className="border-t">
                       <td className="px-4 py-2">{item.products?.product_name}</td>
                       <td className="px-4 py-2 text-right">{item.quantity}</td>
-                      <td className="px-4 py-2 text-right">${item.unit_price.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-right">${item.line_total.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(item.unit_price, selectedOrder.currency || 'IDR')}</td>
+                      <td className="px-4 py-2 text-right">{formatCurrency(item.line_total, selectedOrder.currency || 'IDR')}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot className="bg-gray-50 font-medium">
                   <tr>
                     <td colSpan={3} className="px-4 py-2 text-right">Total:</td>
-                    <td className="px-4 py-2 text-right">${selectedOrder.total_amount.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right">{formatCurrency(selectedOrder.total_amount, selectedOrder.currency || 'IDR')}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -918,6 +968,17 @@ export default function SalesOrders() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {showProformaModal && proformaOrder && (
+        <ProformaInvoiceView
+          salesOrder={proformaOrder}
+          items={proformaOrder.sales_order_items || []}
+          onClose={() => {
+            setShowProformaModal(false);
+            setProformaOrder(null);
+          }}
+        />
       )}
       </div>
     </Layout>

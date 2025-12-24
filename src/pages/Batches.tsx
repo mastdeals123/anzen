@@ -193,17 +193,12 @@ export function Batches() {
       const freightAmount = calculateCharge(formData.freight_charges, formData.freight_charge_type, importPriceIDR);
       const otherAmount = calculateCharge(formData.other_charges, formData.other_charge_type, importPriceIDR);
 
-      // Calculate correct current stock
-      // For new batches: current_stock = import_quantity (nothing sold yet)
-      // For existing batches: current_stock = import_quantity - actual_sold_quantity
-      const finalCurrentStock = formData.import_quantity - soldQuantity;
-
       const batchData = {
         batch_number: formData.batch_number,
         product_id: formData.product_id,
         import_date: formData.import_date,
         import_quantity: formData.import_quantity,
-        current_stock: finalCurrentStock,
+        current_stock: formData.import_quantity,
         packaging_details: formData.packaging_details,
         import_price: importPriceIDR,
         import_price_usd: formData.import_price_usd || null,
@@ -227,6 +222,21 @@ export function Batches() {
 
         if (error) throw error;
         batchId = editingBatch.id;
+
+        if (formData.import_quantity !== editingBatch.import_quantity) {
+          const { error: transError } = await supabase
+            .from('inventory_transactions')
+            .update({
+              quantity: formData.import_quantity,
+              notes: `Updated import quantity from ${editingBatch.import_quantity} to ${formData.import_quantity}`
+            })
+            .eq('batch_id', editingBatch.id)
+            .eq('transaction_type', 'purchase');
+
+          if (transError) {
+            console.error('Error updating purchase transaction:', transError);
+          }
+        }
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
@@ -288,21 +298,7 @@ export function Batches() {
   };
 
   const handleEdit = async (batch: Batch) => {
-    // Calculate actual sold quantity from sales records
-    const { data: salesData } = await supabase
-      .from('sales_invoice_items')
-      .select('quantity')
-      .eq('batch_id', batch.id);
-
-    const actualSoldQuantity = salesData?.reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0) || 0;
-
-    // Update the batch object with correct current_stock based on actual sales
-    const correctedBatch = {
-      ...batch,
-      current_stock: batch.import_quantity - actualSoldQuantity
-    };
-
-    setEditingBatch(correctedBatch);
+    setEditingBatch(batch);
 
     // Parse packaging details to extract per_pack_weight and pack_type
     let perPackWeight = '';

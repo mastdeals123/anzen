@@ -51,6 +51,7 @@ export function Dashboard() {
     overdueInvoicesAmount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -58,6 +59,7 @@ export function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
+      setError(null);
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -74,7 +76,7 @@ export function Dashboard() {
         overdueInvoicesResult,
       ] = await Promise.all([
         supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('batches').select('*').eq('is_active', true),
+        supabase.from('batches').select('current_stock, expiry_date').eq('is_active', true),
         supabase.from('customers').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase
           .from('sales_invoices')
@@ -145,8 +147,8 @@ export function Dashboard() {
         overdueInvoicesCount: overdueInvoicesResult.data?.length || 0,
         overdueInvoicesAmount: overdueAmount,
       });
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
+    } catch (err) {
+      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -224,17 +226,28 @@ export function Dashboard() {
           <p className="text-gray-600 mt-1">Welcome to your pharma trading management system</p>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+            <p className="text-red-700 font-medium">{error}</p>
+            <button
+              onClick={loadDashboardData}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
-                <div className="h-12 bg-gray-200 rounded mb-4" />
-                <div className="h-6 bg-gray-200 rounded w-1/2" />
+              <div key={i} className="bg-white rounded-lg shadow p-4 animate-pulse">
+                <div className="h-10 bg-gray-200 rounded mb-3" />
+                <div className="h-5 bg-gray-200 rounded w-1/2" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
             {statCards.map((card:any, index) => {
               const Icon = card.icon;
               const colors = colorClasses[card.color];
@@ -242,23 +255,23 @@ export function Dashboard() {
               return (
                 <div
                   key={index}
-                  className={`${colors.bg} rounded-lg shadow p-6 transition hover:shadow-lg ${isClickable ? 'cursor-pointer' : ''}`}
+                  className={`${colors.bg} rounded-lg shadow p-3 md:p-4 transition hover:shadow-lg ${isClickable ? 'cursor-pointer' : ''}`}
                   onClick={() => isClickable && setCurrentPage(card.link)}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`text-sm font-medium ${card.color === 'red-gradient' ? 'text-white/80' : 'text-gray-600'}`}>{card.title}</p>
-                      <p className={`text-2xl font-bold ${colors.text} mt-2`}>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs md:text-sm font-medium ${card.color === 'red-gradient' ? 'text-white/80' : 'text-gray-600'} truncate`}>{card.title}</p>
+                      <p className={`text-xl md:text-2xl font-bold ${colors.text} mt-1`}>
                         {card.value}
                       </p>
                       {card.subtitle && (
-                        <p className={`text-sm mt-1 ${card.color === 'red-gradient' ? 'text-white/90' : 'text-gray-500'}`}>
+                        <p className={`text-xs mt-0.5 ${card.color === 'red-gradient' ? 'text-white/90' : 'text-gray-500'} truncate`}>
                           {card.subtitle}
                         </p>
                       )}
                     </div>
-                    <div className={`${colors.icon} p-3 rounded-full`}>
-                      <Icon className={`w-6 h-6 ${colors.text}`} />
+                    <div className={`${colors.icon} p-2 md:p-3 rounded-full flex-shrink-0 ml-2`}>
+                      <Icon className={`w-4 h-4 md:w-5 md:h-5 ${colors.text}`} />
                     </div>
                   </div>
                 </div>

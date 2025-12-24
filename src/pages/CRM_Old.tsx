@@ -92,7 +92,7 @@ export function CRM() {
     try {
       const { data, error } = await supabase
         .from('crm_leads')
-        .select('*, user_profiles!crm_leads_assigned_to_fkey(full_name)')
+        .select('*, user_profiles!assigned_to(full_name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
