@@ -60,7 +60,6 @@ export function Layout({ children }: LayoutProps) {
     { id: 'delivery-challan', label: t('nav.deliveryChallan'), icon: Truck, roles: ['admin', 'accounts', 'sales', 'warehouse'] },
     { id: 'sales', label: t('nav.sales'), icon: ShoppingCart, roles: ['admin', 'accounts', 'sales'] },
     { id: 'purchase-orders', label: 'Purchase Orders', icon: ClipboardList, roles: ['admin', 'warehouse', 'accounts'] },
-    { id: 'goods-receipt-notes', label: 'Goods Receipt (GRN)', icon: Package, roles: ['admin', 'warehouse', 'accounts'] },
     { id: 'import-requirements', label: 'Import Requirements', icon: TrendingUp, roles: ['admin', 'warehouse', 'sales'] },
     { id: 'finance', label: t('nav.finance'), icon: DollarSign, roles: ['admin', 'accounts'] },
     { id: 'crm', label: t('nav.crm'), icon: UserCircle, roles: ['admin', 'sales'] },

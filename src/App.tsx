@@ -23,7 +23,6 @@ import ImportRequirements from './pages/ImportRequirements';
 import MaterialReturns from './pages/MaterialReturns';
 import { CreditNotes } from './pages/CreditNotes';
 import PurchaseOrders from './pages/PurchaseOrders';
-import GoodsReceiptNotes from './pages/GoodsReceiptNotes';
 import { ApprovalNotifications } from './components/ApprovalNotifications';
 import { initializeNotificationChecks } from './utils/notifications';
 
@@ -78,8 +77,6 @@ function AppContent() {
         return <SalesOrders />;
       case 'purchase-orders':
         return <PurchaseOrders />;
-      case 'goods-receipt-notes':
-        return <GoodsReceiptNotes />;
       case 'import-requirements':
         return <ImportRequirements />;
       case 'crm':
