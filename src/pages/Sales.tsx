@@ -1438,8 +1438,9 @@ export function Sales() {
                           onChange={(e) => updateItemTotal(index, { ...item, quantity: e.target.value === '' ? 1 : Number(e.target.value) })}
                           className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                           required
-                          min="1"
-                          placeholder="1"
+                          min="0.001"
+                          step="0.001"
+                          placeholder="0.25"
                         />
                       </div>
 
