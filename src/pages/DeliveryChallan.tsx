@@ -442,14 +442,29 @@ export function DeliveryChallan() {
       let packType = null;
       let numberOfPacks = null;
 
+      // Extract packaging details from batch
       if (batch.packaging_details) {
         const match = batch.packaging_details.match(/(\d+)\s+(\w+)s?\s+x\s+(\d+(?:\.\d+)?)kg/i);
         if (match) {
-          numberOfPacks = parseInt(match[1], 10);
           packType = match[2].toLowerCase();
           packSize = parseFloat(match[3]);
+
+          // SMART DEFAULTS: Calculate number of packs based on AVAILABLE stock
+          const availableStock = batch.current_stock - (batch.reserved_stock || 0);
+
+          if (packSize && packSize > 0) {
+            // Calculate how many full packs can fit in available stock
+            const maxPacks = Math.floor(availableStock / packSize);
+
+            // Default to 1 pack if available, otherwise 0 (will trigger validation)
+            numberOfPacks = maxPacks >= 1 ? 1 : 0;
+          } else {
+            numberOfPacks = 1;
+          }
         }
       }
+
+      const quantity = packSize && numberOfPacks ? packSize * numberOfPacks : 0;
 
       newItems[index] = {
         ...newItems[index],
@@ -457,7 +472,7 @@ export function DeliveryChallan() {
         pack_size: packSize,
         pack_type: packType,
         number_of_packs: numberOfPacks || 1,
-        quantity: packSize && numberOfPacks ? packSize * numberOfPacks : 0,
+        quantity: quantity,
       };
       setItems(newItems);
     }
@@ -563,7 +578,8 @@ export function DeliveryChallan() {
 
         if (totalQuantity > availableStock) {
           const product = products.find(p => p.id === items.find(i => i.batch_id === batchId)?.product_id);
-          alert(`Insufficient available stock for batch ${batch.batch_number}!\n\nProduct: ${product?.product_name || 'Unknown'}\nBatch: ${batch.batch_number}\nAvailable: ${availableStock} kg\nTotal Requested (across all items): ${totalQuantity} kg\n\nYou are using this batch in multiple items. Please reduce quantities or select different batches.`);
+          const unit = product?.unit || 'kg';
+          alert(`Insufficient available stock for batch ${batch.batch_number}!\n\nProduct: ${product?.product_name || 'Unknown'}\nBatch: ${batch.batch_number}\nAvailable: ${availableStock} ${unit}\nTotal Requested (across all items): ${totalQuantity} ${unit}\n\nYou are using this batch in multiple items. Please reduce quantities or select different batches.`);
           return;
         }
       }
