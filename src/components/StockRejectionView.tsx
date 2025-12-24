@@ -41,8 +41,9 @@ export function StockRejectionView({ rejection, onClose }: StockRejectionViewPro
   };
 
   const formatCurrency = (amount: number | undefined | null) => {
-    if (amount === undefined || amount === null) return 'Rp 0';
-    return `Rp ${amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    if (amount === undefined || amount === null) return 'Rp 0,00';
+    // Always show 2 decimal places in Indonesian format (Rp 136.125.000,00)
+    return `Rp ${amount.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const handlePrint = () => {

@@ -58,10 +58,9 @@ export function InvoiceView({ invoice, items, onClose }: InvoiceViewProps) {
   const { t, language } = useLanguage();
 
   const formatCurrency = (amount: number | undefined | null) => {
-    if (amount === undefined || amount === null) return 'Rp 0';
-    // Show decimals only if there are decimal places
-    const hasDecimals = amount % 1 !== 0;
-    return `${amount.toLocaleString('id-ID', { minimumFractionDigits: hasDecimals ? 2 : 0, maximumFractionDigits: 2 })}`;
+    if (amount === undefined || amount === null) return 'Rp 0,00';
+    // Always show 2 decimal places in Indonesian format (Rp 136.125.000,00)
+    return `Rp ${amount.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatDate = (dateString: string) => {

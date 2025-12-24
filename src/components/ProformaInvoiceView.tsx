@@ -57,9 +57,10 @@ export function ProformaInvoiceView({ salesOrder, items, onClose }: ProformaInvo
   const currencySymbol = currency === 'IDR' ? 'Rp' : currency === 'USD' ? '$' : currency;
 
   const formatCurrency = (amount: number | undefined | null) => {
-    if (amount === undefined || amount === null) return `${currencySymbol} 0`;
+    if (amount === undefined || amount === null) return `${currencySymbol} 0,00`;
     if (currency === 'IDR') {
-      return `${amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+      // Always show 2 decimal places in Indonesian format (136.125.000,00)
+      return `${amount.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return `${currencySymbol} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
