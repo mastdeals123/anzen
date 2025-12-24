@@ -685,6 +685,7 @@ export function Sales() {
         unit_price: Math.round(suggestedPrice),
         tax_rate: 11,
         total: 0,
+        delivery_challan_item_id: item.id || null, // Link to DC item
       };
     });
 
@@ -914,7 +915,23 @@ export function Sales() {
         .from('sales_invoice_items')
         .insert(invoiceItemsData);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Error inserting invoice items:', itemsError);
+        console.error('Invoice items data:', invoiceItemsData);
+        throw new Error(`Failed to save invoice items: ${itemsError.message}`);
+      }
+
+      // Verify items were actually inserted
+      const { data: insertedItems, error: verifyError } = await supabase
+        .from('sales_invoice_items')
+        .select('id')
+        .eq('invoice_id', invoice.id);
+
+      if (verifyError) {
+        console.error('Error verifying items:', verifyError);
+      } else if (!insertedItems || insertedItems.length === 0) {
+        throw new Error('Invoice items were not saved. Please try again.');
+      }
 
       // Stock deduction and inventory transactions are handled automatically by database trigger
 
